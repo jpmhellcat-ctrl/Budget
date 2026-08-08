@@ -112,7 +112,7 @@
 
         /* Buttons */
         .btn {
-            background-color: var(--accent); color: white; border: none; padding: 10px 20px;
+            background-color: var(--accent); color: white; border: none; padding: 12px 20px;
             font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s;
         }
         .btn:active { transform: scale(0.98); }
@@ -129,7 +129,7 @@
         .actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .btn-group-right { display: flex; gap: 10px; flex-wrap: wrap; }
 
-        /* Tabelle */
+        /* Tabelle Basis (Desktop) */
         .table-container {
             background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             overflow-x: auto; max-height: 600px; margin-bottom: 20px;
@@ -150,10 +150,10 @@
         input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
         
         .action-btns { display: flex; gap: 6px; }
-        .btn-icon { background-color: var(--border); color: var(--text); padding: 8px 12px; font-size: 12px; border-radius: 6px; }
+        .btn-icon { background-color: var(--border); color: var(--text); padding: 8px 12px; font-size: 14px; border-radius: 6px; }
         .btn-icon:hover { background-color: var(--text-muted); color: white; }
         .btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-danger { background-color: #E74C3C; padding: 8px 12px; border-radius: 6px; color: white; }
+        .btn-danger { background-color: #E74C3C; padding: 8px 12px; font-size: 14px; border-radius: 6px; color: white; }
         .btn-danger:hover { background-color: #C0392B; }
 
         /* Fixierte Sackgeld-Zeile Budget */
@@ -168,6 +168,74 @@
         /* Status Farben im Tracker (Einnahme vs Ausgabe) */
         .text-success { color: var(--success); font-weight: bold; }
         .text-danger { color: #E74C3C; font-weight: bold; }
+
+        /* ========================================= */
+        /* MOBILE OPTIMIERUNG (Karten-Layout)        */
+        /* ========================================= */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header-wrapper { flex-direction: column; align-items: stretch; gap: 15px; }
+            .btn-darkmode { justify-content: center; width: 100%; }
+            
+            .tabs { flex-wrap: wrap; }
+            .tab-btn { flex: 1 1 100%; text-align: center; font-size: 15px; margin-bottom: 5px; border-radius: 8px; }
+            
+            .summary-cards { grid-template-columns: 1fr; gap: 15px; }
+            
+            /* Actions Bar auf Mobile untereinander */
+            .actions-bar { flex-direction: column; align-items: stretch; gap: 15px; }
+            .actions-bar > div, .btn-group-right { width: 100%; flex-direction: column; gap: 10px; }
+            .btn, input#tracker-search { width: 100%; margin: 0 !important; max-width: none; }
+            
+            .month-nav { flex-wrap: wrap; padding: 15px 10px; }
+            .month-nav span { flex: 1 1 100%; text-align: center; order: -1; margin-bottom: 15px; }
+            .month-nav .btn-icon { flex: 1; text-align: center; }
+
+            /* Tabelle zu Karten umbauen */
+            .table-container { background: transparent; box-shadow: none; border-radius: 0; }
+            table, thead, tbody, th, td, tr, tfoot { display: block; width: 100%; }
+            thead { display: none; } /* Kopfzeile verstecken */
+            
+            tr {
+                background: var(--card-bg);
+                margin-bottom: 20px;
+                border-radius: 12px;
+                border: 1px solid var(--border);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+                overflow: hidden;
+            }
+            
+            td {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px 15px;
+                border-bottom: 1px solid var(--border);
+                gap: 8px;
+            }
+            td:last-child { border-bottom: none; }
+            
+            /* Spalten-Namen einfügen */
+            td::before {
+                content: attr(data-label);
+                font-size: 12px;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                font-weight: bold;
+                letter-spacing: 0.5px;
+            }
+
+            input[type="number"] { text-align: left; } /* Auf Mobile sieht linksbündig oft besser aus */
+            
+            /* Aktions-Buttons auf Mobile */
+            .action-btns { flex-direction: row; justify-content: space-between; gap: 10px; }
+            .action-btns .btn-icon, .action-btns .btn-danger { flex: 1; padding: 15px; text-align: center; }
+            
+            /* Sackgeld-Karte speziell formatieren */
+            tfoot tr { border: 2px solid var(--success); margin-top: 30px; }
+            tfoot td { flex-direction: column; align-items: stretch; }
+            .hide-on-mobile { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -212,12 +280,11 @@
             </div>
 
             <div class="actions-bar">
-                <div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn" onclick="addRow()">+ Zeile hinzufügen</button>
                     <button class="btn btn-warning" onclick="resetData()">Standardwerte laden</button>
                 </div>
                 <div class="btn-group-right">
-                    <!-- Hidden File Input for Budget -->
                     <input type="file" id="budget-csv-file" accept=".csv" style="display: none;" onchange="importBudgetCSV(event)">
                     <button class="btn btn-import" onclick="document.getElementById('budget-csv-file').click()">⬆️ Importieren</button>
                     <button class="btn" style="background-color: #27AE60;" onclick="exportCSV()">⬇ Exportieren</button>
@@ -234,20 +301,20 @@
                             <th style="min-width: 110px;">Halbes Jahr</th>
                             <th style="min-width: 110px;">Ganzes Jahr</th>
                             <th>Details</th>
-                            <th style="min-width: 120px;">Aktion</th>
+                            <th style="min-width: 130px;">Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="table-body">
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td><input type="text" class="readonly-text" value="Sackgeld (Rest)" readonly></td>
-                            <td><input type="text" class="readonly-text" value="Freizeit" readonly></td>
-                            <td id="sackgeld-month" style="font-size: 16px; font-weight: bold; text-align: right; padding-right: 25px;">0.00</td>
-                            <td id="sackgeld-half" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
-                            <td id="sackgeld-year" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
-                            <td><input type="text" id="sackgeld-details" onchange="updateSackgeldDetails(this.value)" placeholder="Notiz für Restbetrag..."></td>
-                            <td></td>
+                            <td class="hide-on-mobile"><input type="text" class="readonly-text" value="Sackgeld (Rest)" readonly></td>
+                            <td class="hide-on-mobile"><input type="text" class="readonly-text" value="Freizeit" readonly></td>
+                            <td data-label="Sackgeld (Pro Monat)" id="sackgeld-month" style="font-size: 18px; font-weight: bold; text-align: right; padding-right: 25px;">0.00</td>
+                            <td data-label="Sackgeld (Halbes Jahr)" id="sackgeld-half" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
+                            <td data-label="Sackgeld (Ganzes Jahr)" id="sackgeld-year" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
+                            <td data-label="Notiz für Restbetrag"><input type="text" id="sackgeld-details" onchange="updateSackgeldDetails(this.value)" placeholder="Notiz für Restbetrag..."></td>
+                            <td class="hide-on-mobile"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -269,7 +336,7 @@
                 <div class="card">
                     <h3>Start-Budget (Lohn - Fixkosten)</h3>
                     <div class="value" id="trk-start">0.00 CHF</div>
-                    <div class="sub-value">Das Geld, das dir für Transport, Alltag & Freizeit zur Verfügung steht.</div>
+                    <div class="sub-value">Verfügbar für Transport, Alltag & Freizeit.</div>
                 </div>
                 <div class="card warning">
                     <h3>Ausgaben (Total)</h3>
@@ -291,12 +358,10 @@
             <div class="actions-bar">
                 <div style="display: flex; gap: 15px; flex: 1; align-items: center; flex-wrap: wrap;">
                     <button class="btn" onclick="addTrackerRow()">+ Eintrag erfassen</button>
-                    <!-- SUCHFELD -->
                     <input type="text" id="tracker-search" placeholder="🔍 Suchen..." oninput="renderTracker()" style="max-width: 200px; margin: 0;">
-                    <span id="filtered-total" style="font-weight: bold; color: var(--accent); display: none; background: var(--card-bg); padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">Gefilterte Ausgaben: 0.00 CHF</span>
+                    <span id="filtered-total" style="font-weight: bold; color: var(--accent); display: none; background: var(--card-bg); padding: 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;">Gefilterte Ausgaben: 0.00 CHF</span>
                 </div>
                 <div class="btn-group-right">
-                    <!-- Hidden File Input for Tracker -->
                     <input type="file" id="tracker-csv-file" accept=".csv" style="display: none;" onchange="importTrackerCSV(event)">
                     <button class="btn btn-import" onclick="document.getElementById('tracker-csv-file').click()">⬆️ Importieren</button>
                     <button class="btn" style="background-color: #27AE60;" onclick="exportTrackerCSV()">⬇ Exportieren</button>
@@ -321,7 +386,6 @@
                 </table>
             </div>
             
-            <!-- Kategorie Auswertung -->
             <div class="cat-breakdown">
                 <h4>📊 Ausgaben nach Kategorie (Dieser Monat)</h4>
                 <div class="cat-grid">
@@ -382,7 +446,7 @@
         }
 
         // --- 3. LOGIK: BUDGET-PLANER (TAB 1) ---
-        // Anonymisierte Standard-Werte (alles auf 0.00) für GitHub
+        // Anonymisierte Standard-Werte für GitHub
         const defaultData = [
             {kategorie: "Gehalt / Lohn", typ: "Einnahmen", betrag: 0.00, details: ""},
             {kategorie: "Nebeneinkommen", typ: "Einnahmen", betrag: 0.00, details: ""},
@@ -431,17 +495,17 @@
             initialData.forEach((item, index) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td><input type="text" value="${item.kategorie}" onchange="updateTextData(${index}, 'kategorie', this.value)"></td>
-                    <td>
+                    <td data-label="Kategorie"><input type="text" value="${item.kategorie}" onchange="updateTextData(${index}, 'kategorie', this.value)"></td>
+                    <td data-label="Typ">
                         <select onchange="updateTextData(${index}, 'typ', this.value)">
                             ${types.map(t => `<option value="${t}" ${t === item.typ ? 'selected' : ''}>${t}</option>`).join('')}
                         </select>
                     </td>
-                    <td><input type="number" step="0.01" value="${item.betrag.toFixed(2)}" onchange="updateAmount(${index}, 'month', this.value)"></td>
-                    <td><input type="number" step="0.01" value="${(item.betrag * 6).toFixed(2)}" onchange="updateAmount(${index}, 'half', this.value)"></td>
-                    <td><input type="number" step="0.01" value="${(item.betrag * 12).toFixed(2)}" onchange="updateAmount(${index}, 'year', this.value)"></td>
-                    <td><input type="text" value="${item.details}" onchange="updateTextData(${index}, 'details', this.value)"></td>
-                    <td>
+                    <td data-label="Pro Monat"><input type="number" step="0.01" value="${item.betrag.toFixed(2)}" onchange="updateAmount(${index}, 'month', this.value)"></td>
+                    <td data-label="Halbes Jahr"><input type="number" step="0.01" value="${(item.betrag * 6).toFixed(2)}" onchange="updateAmount(${index}, 'half', this.value)"></td>
+                    <td data-label="Ganzes Jahr"><input type="number" step="0.01" value="${(item.betrag * 12).toFixed(2)}" onchange="updateAmount(${index}, 'year', this.value)"></td>
+                    <td data-label="Details"><input type="text" value="${item.details}" onchange="updateTextData(${index}, 'details', this.value)"></td>
+                    <td data-label="Aktion">
                         <div class="action-btns">
                             <button class="btn btn-icon" onclick="moveUp(${index})" ${index === 0 ? 'disabled' : ''}>▲</button>
                             <button class="btn btn-icon" onclick="moveDown(${index})" ${index === initialData.length - 1 ? 'disabled' : ''}>▼</button>
@@ -580,21 +644,21 @@
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td><input type="date" value="${item.date}" onchange="updateTrackerData(${index}, 'date', this.value)"></td>
-                    <td>
+                    <td data-label="Datum"><input type="date" value="${item.date}" onchange="updateTrackerData(${index}, 'date', this.value)"></td>
+                    <td data-label="Typ">
                         <select onchange="updateTrackerData(${index}, 'type', this.value)" style="color: ${item.type === 'Einnahme' ? 'var(--success)' : 'inherit'}; font-weight: bold;">
                             <option value="Ausgabe" ${item.type === 'Ausgabe' ? 'selected' : ''}>📉 Ausgabe</option>
                             <option value="Einnahme" ${item.type === 'Einnahme' ? 'selected' : ''}>📈 Einnahme</option>
                         </select>
                     </td>
-                    <td><input type="text" placeholder="Wofür / Woher?" value="${item.desc}" onchange="updateTrackerData(${index}, 'desc', this.value)"></td>
-                    <td>
+                    <td data-label="Beschreibung"><input type="text" placeholder="Wofür / Woher?" value="${item.desc}" onchange="updateTrackerData(${index}, 'desc', this.value)"></td>
+                    <td data-label="Kategorie">
                         <select onchange="updateTrackerData(${index}, 'cat', this.value)">
                             ${trackerCategories.map(c => `<option value="${c}" ${c === item.cat ? 'selected' : ''}>${c}</option>`).join('')}
                         </select>
                     </td>
-                    <td><input type="number" step="0.01" value="${item.amount.toFixed(2)}" onchange="updateTrackerData(${index}, 'amount', this.value)" class="${item.type === 'Einnahme' ? 'text-success' : ''}"></td>
-                    <td><button class="btn btn-danger" onclick="deleteTrackerRow(${index})">X</button></td>
+                    <td data-label="Betrag (CHF)"><input type="number" step="0.01" value="${item.amount.toFixed(2)}" onchange="updateTrackerData(${index}, 'amount', this.value)" class="${item.type === 'Einnahme' ? 'text-success' : ''}"></td>
+                    <td data-label="Aktion"><button class="btn btn-danger" onclick="deleteTrackerRow(${index})" style="width: 100%;">Löschen X</button></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -602,7 +666,7 @@
             const filterLabel = document.getElementById('filtered-total');
             if (filterLabel) {
                 if (isFiltering) {
-                    filterLabel.style.display = 'inline-block';
+                    filterLabel.style.display = 'block';
                     filterLabel.innerText = 'Gefilterte Ausgaben: ' + formatCHF(filteredSum);
                 } else {
                     filterLabel.style.display = 'none';
@@ -689,10 +753,13 @@
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'Ausgaben_Tracker_Komplett.csv'; a.click();
+            const a = document.createElement('a'); 
+            a.href = url; 
+            a.download = 'Ausgaben_Tracker_Komplett.csv'; 
+            a.click();
         }
 
-        // NEU: Import CSV für Budget
+        // Import CSV für Budget
         function importBudgetCSV(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -722,10 +789,10 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; // Reset Input
+            event.target.value = ''; 
         }
 
-        // NEU: Import CSV für Tracker
+        // Import CSV für Tracker
         function importTrackerCSV(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -751,7 +818,6 @@
                 if (Object.keys(newTrackerData).length > 0) {
                     trackerData = newTrackerData;
                     saveTrackerData();
-                    // Springe automatisch zum neuesten importierten Monat
                     const importedMonths = Object.keys(trackerData).sort();
                     if (importedMonths.length > 0) {
                         currentMonthKey = importedMonths[importedMonths.length - 1];
@@ -761,7 +827,7 @@
                 }
             };
             reader.readAsText(file);
-            event.target.value = ''; // Reset Input
+            event.target.value = ''; 
         }
 
         // --- 6. INITIALISIERUNG ---
