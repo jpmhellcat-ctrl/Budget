@@ -319,9 +319,9 @@
                     <button class="btn btn-warning" onclick="resetData()">Standardwerte laden</button>
                 </div>
                 <div class="btn-group-right">
-                    <!-- Mobile Safe Upload (via label statt verstecktem click) -->
+                    <!-- Mobile Safe Upload ohne accept-Filter -->
                     <label class="btn btn-import">
-                        <input type="file" accept=".csv" class="visually-hidden" onchange="importBudgetCSV(event)">
+                        <input type="file" class="visually-hidden" onchange="importBudgetCSV(event)">
                         ⬆️ Importieren
                     </label>
                     <button class="btn" style="background-color: #27AE60;" onclick="exportCSV()">⬇ Exportieren</button>
@@ -399,9 +399,9 @@
                     <span id="filtered-total" style="font-weight: bold; color: var(--accent); display: none; background: var(--card-bg); padding: 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; width: 100%;">Gefilterte Ausgaben: 0.00 CHF</span>
                 </div>
                 <div class="btn-group-right">
-                    <!-- Mobile Safe Upload -->
+                    <!-- Mobile Safe Upload ohne accept-Filter -->
                     <label class="btn btn-import">
-                        <input type="file" accept=".csv" class="visually-hidden" onchange="importTrackerCSV(event)">
+                        <input type="file" class="visually-hidden" onchange="importTrackerCSV(event)">
                         ⬆️ Importieren
                     </label>
                     <button class="btn" style="background-color: #27AE60;" onclick="exportTrackerCSV()">⬇ Exportieren</button>
