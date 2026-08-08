@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interaktives Monatsbudget & Tracker</title>
     <style>
+        /* Verhindert das Abschneiden am rechten Rand */
+        * { box-sizing: border-box; }
+
         /* Farbvariablen - Heller Modus */
         :root {
             --primary: #2C3E50;
@@ -144,7 +147,7 @@
         
         input[type="text"], input[type="number"], input[type="date"], select {
             width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;
-            font-size: 14px; background-color: var(--bg); color: var(--text); box-sizing: border-box; transition: border-color 0.2s;
+            font-size: 14px; background-color: var(--bg); color: var(--text); transition: border-color 0.2s;
         }
         input:focus, select:focus { outline: none; border-color: var(--accent); }
         input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
@@ -160,9 +163,16 @@
         tfoot tr { background-color: var(--sackgeld-bg); }
         tfoot td { border-top: 2px solid var(--primary); color: var(--primary); }
         .dark-mode tfoot td { color: var(--success); }
+        
         .readonly-text {
             background: transparent !important; border: none !important; font-weight: bold;
             color: inherit !important; padding: 8px 0 !important; box-shadow: none !important;
+        }
+        
+        .sackgeld-val {
+            font-weight: bold;
+            text-align: right;
+            padding-right: 25px;
         }
         
         /* Status Farben im Tracker (Einnahme vs Ausgabe) */
@@ -173,7 +183,7 @@
         /* MOBILE OPTIMIERUNG (Karten-Layout)        */
         /* ========================================= */
         @media (max-width: 768px) {
-            body { padding: 10px; }
+            body { padding: 10px; overflow-x: hidden; }
             .header-wrapper { flex-direction: column; align-items: stretch; gap: 15px; }
             .btn-darkmode { justify-content: center; width: 100%; }
             
@@ -192,7 +202,7 @@
             .month-nav .btn-icon { flex: 1; text-align: center; }
 
             /* Tabelle zu Karten umbauen */
-            .table-container { background: transparent; box-shadow: none; border-radius: 0; }
+            .table-container { background: transparent; box-shadow: none; border-radius: 0; padding: 0; overflow: visible;}
             table, thead, tbody, th, td, tr, tfoot { display: block; width: 100%; }
             thead { display: none; } /* Kopfzeile verstecken */
             
@@ -225,7 +235,7 @@
                 letter-spacing: 0.5px;
             }
 
-            input[type="number"] { text-align: left; } /* Auf Mobile sieht linksbündig oft besser aus */
+            input[type="number"] { text-align: left; }
             
             /* Aktions-Buttons auf Mobile */
             .action-btns { flex-direction: row; justify-content: space-between; gap: 10px; }
@@ -234,6 +244,10 @@
             /* Sackgeld-Karte speziell formatieren */
             tfoot tr { border: 2px solid var(--success); margin-top: 30px; }
             tfoot td { flex-direction: column; align-items: stretch; }
+            
+            /* Überschreibt die rechtsbündigen Texte für Mobile, damit sie nicht überlappen */
+            .sackgeld-val { text-align: left !important; padding-right: 0 !important; font-size: 16px !important; }
+            
             .hide-on-mobile { display: none !important; }
         }
     </style>
@@ -280,7 +294,7 @@
             </div>
 
             <div class="actions-bar">
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
                     <button class="btn" onclick="addRow()">+ Zeile hinzufügen</button>
                     <button class="btn btn-warning" onclick="resetData()">Standardwerte laden</button>
                 </div>
@@ -310,9 +324,9 @@
                         <tr>
                             <td class="hide-on-mobile"><input type="text" class="readonly-text" value="Sackgeld (Rest)" readonly></td>
                             <td class="hide-on-mobile"><input type="text" class="readonly-text" value="Freizeit" readonly></td>
-                            <td data-label="Sackgeld (Pro Monat)" id="sackgeld-month" style="font-size: 18px; font-weight: bold; text-align: right; padding-right: 25px;">0.00</td>
-                            <td data-label="Sackgeld (Halbes Jahr)" id="sackgeld-half" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
-                            <td data-label="Sackgeld (Ganzes Jahr)" id="sackgeld-year" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
+                            <td data-label="Sackgeld (Pro Monat)" id="sackgeld-month" class="sackgeld-val" style="font-size: 18px;">0.00</td>
+                            <td data-label="Sackgeld (Halbes Jahr)" id="sackgeld-half" class="sackgeld-val">0.00</td>
+                            <td data-label="Sackgeld (Ganzes Jahr)" id="sackgeld-year" class="sackgeld-val">0.00</td>
                             <td data-label="Notiz für Restbetrag"><input type="text" id="sackgeld-details" onchange="updateSackgeldDetails(this.value)" placeholder="Notiz für Restbetrag..."></td>
                             <td class="hide-on-mobile"></td>
                         </tr>
@@ -356,10 +370,10 @@
             </div>
 
             <div class="actions-bar">
-                <div style="display: flex; gap: 15px; flex: 1; align-items: center; flex-wrap: wrap;">
+                <div style="display: flex; gap: 15px; flex: 1; align-items: center; flex-wrap: wrap; width: 100%;">
                     <button class="btn" onclick="addTrackerRow()">+ Eintrag erfassen</button>
                     <input type="text" id="tracker-search" placeholder="🔍 Suchen..." oninput="renderTracker()" style="max-width: 200px; margin: 0;">
-                    <span id="filtered-total" style="font-weight: bold; color: var(--accent); display: none; background: var(--card-bg); padding: 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center;">Gefilterte Ausgaben: 0.00 CHF</span>
+                    <span id="filtered-total" style="font-weight: bold; color: var(--accent); display: none; background: var(--card-bg); padding: 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; width: 100%;">Gefilterte Ausgaben: 0.00 CHF</span>
                 </div>
                 <div class="btn-group-right">
                     <input type="file" id="tracker-csv-file" accept=".csv" style="display: none;" onchange="importTrackerCSV(event)">
