@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaktives Monatsbudget & Tracker</title>
+    <style>
+        /* Farbvariablen - Heller Modus */
+        :root {
+            --primary: #2C3E50;
+            --accent: #3498DB;
+            --success: #27AE60;
+            --bg: #F4F6F8;
+            --card-bg: #FFFFFF;
+            --text: #2C3E50;
+            --text-muted: #7F8C8D;
+            --border: #E0E6ED;
+            --sackgeld-bg: #E8F8F5;
+            --hover-bg: #F8FAFC;
+            --tab-bg: #EAECEE;
+        }
+
+        /* Farbvariablen - Dunkler Modus */
+        .dark-mode {
+            --primary: #34495E;
+            --accent: #2980B9;
+            --success: #2ECC71;
+            --bg: #121212;
+            --card-bg: #1E1E1E;
+            --text: #E0E0E0;
+            --text-muted: #A0A0A0;
+            --border: #333333;
+            --sackgeld-bg: #172A25;
+            --hover-bg: #2C2C2C;
+            --tab-bg: #252525;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        /* Header & Dark Mode Button */
+        .header-wrapper {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
+        }
+        header h1 { margin: 0 0 5px 0; color: var(--primary); }
+        header p { color: var(--text-muted); margin: 0; }
+
+        /* Tabs System */
+        .tabs {
+            display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 10px;
+        }
+        .tab-btn {
+            background-color: var(--tab-bg); color: var(--text-muted); border: none; padding: 12px 24px;
+            font-size: 16px; font-weight: 600; border-radius: 8px 8px 0 0; cursor: pointer; transition: all 0.2s ease;
+        }
+        .tab-btn:hover { background-color: var(--hover-bg); color: var(--text); }
+        .tab-btn.active { background-color: var(--accent); color: white; box-shadow: 0 -3px 0 var(--primary) inset; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Zusammenfassungs-Karten */
+        .summary-cards {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;
+        }
+        .card {
+            background: var(--card-bg); padding: 25px 20px; border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-bottom: 4px solid var(--accent);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        .card.income { border-bottom-color: var(--success); }
+        .card.warning { border-bottom-color: #E74C3C; }
+        .card h3 { margin: 0 0 10px 0; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .card .value { font-size: 24px; font-weight: 700; color: var(--text); }
+        .card .sub-value { font-size: 12px; color: var(--text-muted); margin-top: 5px; line-height: 1.4; }
+
+        /* Kategorie Auswertung im Tracker */
+        .cat-breakdown {
+            background: var(--card-bg); border-radius: 12px; padding: 20px; margin-top: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .cat-breakdown h4 { margin: 0 0 15px 0; color: var(--primary); font-size: 16px; }
+        .cat-grid { display: flex; gap: 15px; flex-wrap: wrap; }
+        .cat-item {
+            background: var(--bg); padding: 15px; border-radius: 8px; flex: 1; min-width: 120px;
+            border-left: 4px solid var(--accent);
+        }
+        .cat-item.cat-freizeit { border-left-color: #9B59B6; }
+        .cat-item.cat-transport { border-left-color: #F1C40F; }
+        .cat-item.cat-sonstiges { border-left-color: #95A5A6; }
+        .cat-item.cat-einmalig { border-left-color: #E67E22; }
+        
+        .cat-item .cat-name { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
+        .cat-item .cat-sum { font-size: 18px; font-weight: bold; color: var(--text); margin-top: 5px; }
+
+        /* Monats-Navigation (Tracker) */
+        .month-nav {
+            display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 25px;
+            background: var(--card-bg); padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .month-nav span { font-size: 20px; font-weight: bold; color: var(--primary); min-width: 150px; text-align: center; }
+
+        /* Buttons */
+        .btn {
+            background-color: var(--accent); color: white; border: none; padding: 10px 20px;
+            font-size: 14px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn:hover { background-color: #2980B9; }
+        .btn-warning { background-color: #F39C12; margin-left: 10px; }
+        .btn-warning:hover { background-color: #D68910; }
+        .btn-import { background-color: #8E44AD; }
+        .btn-import:hover { background-color: #732D91; }
+        .btn-darkmode {
+            background-color: var(--card-bg); color: var(--text); border: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+        }
+        .btn-darkmode:hover { background-color: var(--hover-bg); }
+
+        .actions-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .btn-group-right { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        /* Tabelle */
+        .table-container {
+            background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            overflow-x: auto; max-height: 600px; margin-bottom: 20px;
+        }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        thead th {
+            position: sticky; top: 0; background-color: var(--primary); color: white;
+            font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; z-index: 10;
+        }
+        tr:hover { background-color: var(--hover-bg); }
+        
+        input[type="text"], input[type="number"], input[type="date"], select {
+            width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 14px; background-color: var(--bg); color: var(--text); box-sizing: border-box; transition: border-color 0.2s;
+        }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+        input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; }
+        
+        .action-btns { display: flex; gap: 6px; }
+        .btn-icon { background-color: var(--border); color: var(--text); padding: 8px 12px; font-size: 12px; border-radius: 6px; }
+        .btn-icon:hover { background-color: var(--text-muted); color: white; }
+        .btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger { background-color: #E74C3C; padding: 8px 12px; border-radius: 6px; color: white; }
+        .btn-danger:hover { background-color: #C0392B; }
+
+        /* Fixierte Sackgeld-Zeile Budget */
+        tfoot tr { background-color: var(--sackgeld-bg); }
+        tfoot td { border-top: 2px solid var(--primary); color: var(--primary); }
+        .dark-mode tfoot td { color: var(--success); }
+        .readonly-text {
+            background: transparent !important; border: none !important; font-weight: bold;
+            color: inherit !important; padding: 8px 0 !important; box-shadow: none !important;
+        }
+        
+        /* Status Farben im Tracker (Einnahme vs Ausgabe) */
+        .text-success { color: var(--success); font-weight: bold; }
+        .text-danger { color: #E74C3C; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-wrapper">
+            <header style="text-align: left; margin-bottom: 0;">
+                <h1>Monatsbudget & Tracker</h1>
+                <p>Plane deine Finanzen und kontrolliere deine tatsächlichen Ausgaben.</p>
+            </header>
+            <button class="btn btn-darkmode" id="darkmode-btn" onclick="toggleDarkMode()">
+                🌙 Dark Mode
+            </button>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab-btn active" id="btn-tab-budget" onclick="switchTab('budget')">📊 Budget-Planer</button>
+            <button class="tab-btn" id="btn-tab-tracker" onclick="switchTab('tracker')">📅 Ausgaben-Tracker</button>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 1: BUDGET PLANER -->
+        <!-- ============================================== -->
+        <div id="tab-budget" class="tab-content active">
+            <div class="summary-cards">
+                <div class="card income">
+                    <h3>Nettolohn</h3>
+                    <div class="value" id="sum-income">0.00 CHF</div>
+                </div>
+                <div class="card">
+                    <h3>Sparen & Investieren</h3>
+                    <div class="value" id="sum-invest">0.00 CHF</div>
+                </div>
+                <div class="card">
+                    <h3>Fixkosten</h3>
+                    <div class="value" id="sum-fixed">0.00 CHF</div>
+                </div>
+                <div class="card">
+                    <h3>Alltag, Transport & Freizeit</h3>
+                    <div class="value" id="sum-variable">0.00 CHF</div>
+                </div>
+            </div>
+
+            <div class="actions-bar">
+                <div>
+                    <button class="btn" onclick="addRow()">+ Zeile hinzufügen</button>
+                    <button class="btn btn-warning" onclick="resetData()">Standardwerte laden</button>
+                </div>
+                <div class="btn-group-right">
+                    <!-- Hidden File Input for Budget -->
+                    <input type="file" id="budget-csv-file" accept=".csv" style="display: none;" onchange="importBudgetCSV(event)">
+                    <button class="btn btn-import" onclick="document.getElementById('budget-csv-file').click()">⬆️ Importieren</button>
+                    <button class="btn" style="background-color: #27AE60;" onclick="exportCSV()">⬇ Exportieren</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Kategorie</th>
+                            <th>Typ</th>
+                            <th style="min-width: 110px;">Pro Monat</th>
+                            <th style="min-width: 110px;">Halbes Jahr</th>
+                            <th style="min-width: 110px;">Ganzes Jahr</th>
+                            <th>Details</th>
+                            <th style="min-width: 120px;">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td><input type="text" class="readonly-text" value="Sackgeld (Rest)" readonly></td>
+                            <td><input type="text" class="readonly-text" value="Freizeit" readonly></td>
+                            <td id="sackgeld-month" style="font-size: 16px; font-weight: bold; text-align: right; padding-right: 25px;">0.00</td>
+                            <td id="sackgeld-half" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
+                            <td id="sackgeld-year" style="text-align: right; font-weight: bold; padding-right: 25px;">0.00</td>
+                            <td><input type="text" id="sackgeld-details" onchange="updateSackgeldDetails(this.value)" placeholder="Notiz für Restbetrag..."></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: AUSGABEN-TRACKER -->
+        <!-- ============================================== -->
+        <div id="tab-tracker" class="tab-content">
+            
+            <div class="month-nav">
+                <button class="btn btn-icon" onclick="changeMonth(-1)">◄ Vorheriger</button>
+                <span id="tracker-month-display">Lade...</span>
+                <button class="btn btn-icon" onclick="changeMonth(1)">Nächster ►</button>
+            </div>
+
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Start-Budget (Lohn - Fixkosten)</h3>
+                    <div class="value" id="trk-start">0.00 CHF</div>
+                    <div class="sub-value">Das Geld, das dir für Transport, Alltag & Freizeit zur Verfügung steht.</div>
+                </div>
+                <div class="card warning">
+                    <h3>Ausgaben (Total)</h3>
+                    <div class="value" id="trk-spent">0.00 CHF</div>
+                    <div class="sub-value">Summe deiner eingetragenen Ausgaben.</div>
+                </div>
+                <div class="card income">
+                    <h3>Zusätzliche Einnahmen</h3>
+                    <div class="value" id="trk-extra">0.00 CHF</div>
+                    <div class="sub-value">Geld, das zusätzlich ins Budget geflossen ist.</div>
+                </div>
+                <div class="card income" id="trk-rest-card">
+                    <h3>Aktueller Restbetrag</h3>
+                    <div class="value" id="trk-rest">0.00 CHF</div>
+                    <div class="sub-value">Noch verfügbar für den restlichen Monat.</div>
+                </div>
+            </div>
+
+            <div class="actions-bar">
+                <div style="display: flex; gap: 15px; flex: 1; align-items: center; flex-wrap: wrap;">
+                    <button class="btn" onclick="addTrackerRow()">+ Eintrag erfassen</button>
+                    <!-- SUCHFELD -->
+                    <input type="text" id="tracker-search" placeholder="🔍 Suchen..." oninput="renderTracker()" style="max-width: 200px; margin: 0;">
+                    <span id="filtered-total" style="font-weight: bold; color: var(--accent); display: none; background: var(--card-bg); padding: 8px 12px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">Gefilterte Ausgaben: 0.00 CHF</span>
+                </div>
+                <div class="btn-group-right">
+                    <!-- Hidden File Input for Tracker -->
+                    <input type="file" id="tracker-csv-file" accept=".csv" style="display: none;" onchange="importTrackerCSV(event)">
+                    <button class="btn btn-import" onclick="document.getElementById('tracker-csv-file').click()">⬆️ Importieren</button>
+                    <button class="btn" style="background-color: #27AE60;" onclick="exportTrackerCSV()">⬇ Exportieren</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="tracker-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px;">Datum</th>
+                            <th style="width: 140px;">Typ</th>
+                            <th>Beschreibung</th>
+                            <th style="width: 160px;">Kategorie</th>
+                            <th style="width: 150px;">Betrag (CHF)</th>
+                            <th style="width: 80px;">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tracker-body">
+                        <!-- Tracker Rows go here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Kategorie Auswertung -->
+            <div class="cat-breakdown">
+                <h4>📊 Ausgaben nach Kategorie (Dieser Monat)</h4>
+                <div class="cat-grid">
+                    <div class="cat-item">
+                        <div class="cat-name">Alltag (Essen, etc.)</div>
+                        <div class="cat-sum" id="cat-sum-alltag">0.00 CHF</div>
+                    </div>
+                    <div class="cat-item cat-transport">
+                        <div class="cat-name">Transport (Tanken)</div>
+                        <div class="cat-sum" id="cat-sum-transport">0.00 CHF</div>
+                    </div>
+                    <div class="cat-item cat-freizeit">
+                        <div class="cat-name">Freizeit & Ausgang</div>
+                        <div class="cat-sum" id="cat-sum-freizeit">0.00 CHF</div>
+                    </div>
+                    <div class="cat-item cat-sonstiges">
+                        <div class="cat-name">Sonstiges</div>
+                        <div class="cat-sum" id="cat-sum-sonstiges">0.00 CHF</div>
+                    </div>
+                    <div class="cat-item cat-einmalig">
+                        <div class="cat-name">Einmalig (Sonderposten)</div>
+                        <div class="cat-sum" id="cat-sum-einmalig">0.00 CHF</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. GLOBALE EINSTELLUNGEN & DARK MODE ---
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('dark_mode_pref', isDark);
+            document.getElementById('darkmode-btn').innerHTML = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+        if (localStorage.getItem('dark_mode_pref') === 'true') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('darkmode-btn').innerHTML = '☀️ Light Mode';
+        }
+
+        function formatCHF(amount) {
+            return amount.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " CHF";
+        }
+
+        // --- 2. TAB SYSTEM ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('btn-tab-' + tabId).classList.add('active');
+
+            if (tabId === 'tracker') {
+                renderTracker(); 
+            }
+        }
+
+        // --- 3. LOGIK: BUDGET-PLANER (TAB 1) ---
+        // Anonymisierte Standard-Werte (alles auf 0.00) für GitHub
+        const defaultData = [
+            {kategorie: "Gehalt / Lohn", typ: "Einnahmen", betrag: 0.00, details: ""},
+            {kategorie: "Nebeneinkommen", typ: "Einnahmen", betrag: 0.00, details: ""},
+            {kategorie: "Miete", typ: "Fixkosten", betrag: 0.00, details: ""},
+            {kategorie: "Krankenkasse", typ: "Fixkosten", betrag: 0.00, details: ""},
+            {kategorie: "Internet & Abos", typ: "Fixkosten", betrag: 0.00, details: ""},
+            {kategorie: "Auto & Versicherung", typ: "Fixkosten", betrag: 0.00, details: ""},
+            {kategorie: "Sparen", typ: "Sparen & Investieren", betrag: 0.00, details: ""},
+            {kategorie: "Wocheneinkauf", typ: "Alltag", betrag: 0.00, details: ""},
+            {kategorie: "Tanken / ÖV", typ: "Transport", betrag: 0.00, details: ""}
+        ];
+
+        let initialData = [];
+        let sackgeldDetailsStr = "";
+        const types = ["Einnahmen", "Sparen & Investieren", "Fixkosten", "Alltag", "Freizeit", "Transport", "Einmalig"];
+
+        function loadBudgetData() {
+            const savedData = localStorage.getItem('budget_data_v4');
+            const savedSackgeld = localStorage.getItem('sackgeld_details_v4');
+            
+            initialData = savedData ? JSON.parse(savedData) : JSON.parse(JSON.stringify(defaultData)); 
+            if (savedSackgeld) sackgeldDetailsStr = savedSackgeld;
+            
+            document.getElementById('sackgeld-details').value = sackgeldDetailsStr;
+            renderBudgetTable();
+        }
+
+        function saveBudgetData() {
+            localStorage.setItem('budget_data_v4', JSON.stringify(initialData));
+            localStorage.setItem('sackgeld_details_v4', sackgeldDetailsStr);
+        }
+
+        function resetData() {
+            if (confirm("Möchtest du wirklich alle Änderungen löschen und die Standardwerte laden?")) {
+                initialData = JSON.parse(JSON.stringify(defaultData));
+                sackgeldDetailsStr = "";
+                document.getElementById('sackgeld-details').value = sackgeldDetailsStr;
+                saveBudgetData();
+                renderBudgetTable();
+            }
+        }
+
+        function renderBudgetTable() {
+            const tbody = document.getElementById("table-body");
+            tbody.innerHTML = "";
+            initialData.forEach((item, index) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><input type="text" value="${item.kategorie}" onchange="updateTextData(${index}, 'kategorie', this.value)"></td>
+                    <td>
+                        <select onchange="updateTextData(${index}, 'typ', this.value)">
+                            ${types.map(t => `<option value="${t}" ${t === item.typ ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><input type="number" step="0.01" value="${item.betrag.toFixed(2)}" onchange="updateAmount(${index}, 'month', this.value)"></td>
+                    <td><input type="number" step="0.01" value="${(item.betrag * 6).toFixed(2)}" onchange="updateAmount(${index}, 'half', this.value)"></td>
+                    <td><input type="number" step="0.01" value="${(item.betrag * 12).toFixed(2)}" onchange="updateAmount(${index}, 'year', this.value)"></td>
+                    <td><input type="text" value="${item.details}" onchange="updateTextData(${index}, 'details', this.value)"></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-icon" onclick="moveUp(${index})" ${index === 0 ? 'disabled' : ''}>▲</button>
+                            <button class="btn btn-icon" onclick="moveDown(${index})" ${index === initialData.length - 1 ? 'disabled' : ''}>▼</button>
+                            <button class="btn btn-danger" onclick="deleteRow(${index})">X</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            calculateBudgetTotals();
+        }
+
+        function moveUp(i) { if(i>0) { const t=initialData[i-1]; initialData[i-1]=initialData[i]; initialData[i]=t; saveBudgetData(); renderBudgetTable(); } }
+        function moveDown(i) { if(i<initialData.length-1) { const t=initialData[i+1]; initialData[i+1]=initialData[i]; initialData[i]=t; saveBudgetData(); renderBudgetTable(); } }
+        function updateTextData(i, f, v) { initialData[i][f] = v; saveBudgetData(); calculateBudgetTotals(); }
+        function updateAmount(i, p, v) { 
+            let n = parseFloat(v) || 0; 
+            initialData[i].betrag = p === 'year' ? n/12 : p === 'half' ? n/6 : n; 
+            saveBudgetData(); renderBudgetTable(); 
+        }
+        function updateSackgeldDetails(v) { sackgeldDetailsStr = v; saveBudgetData(); }
+        function deleteRow(i) { initialData.splice(i, 1); saveBudgetData(); renderBudgetTable(); }
+        function addRow() { initialData.push({kategorie: "Neu", typ: "Fixkosten", betrag: 0.00, details: ""}); saveBudgetData(); renderBudgetTable(); }
+
+        function calculateBudgetTotals() {
+            let inc = 0, exp = 0, inv = 0, fix = 0, varb = 0;
+            initialData.forEach(item => {
+                if (item.typ === "Einnahmen") inc += item.betrag;
+                else {
+                    exp += item.betrag;
+                    if (item.typ === "Sparen & Investieren") inv += item.betrag;
+                    else if (item.typ === "Fixkosten") fix += item.betrag;
+                    else if (item.typ === "Alltag" || item.typ === "Freizeit" || item.typ === "Transport" || item.typ === "Einmalig") varb += item.betrag;
+                }
+            });
+            let sack = inc - exp;
+            
+            document.getElementById("sackgeld-month").style.color = sack < 0 ? '#E74C3C' : 'inherit';
+            document.getElementById("sackgeld-month").innerText = sack.toFixed(2);
+            document.getElementById("sackgeld-half").innerText = (sack * 6).toFixed(2);
+            document.getElementById("sackgeld-year").innerText = (sack * 12).toFixed(2);
+
+            document.getElementById("sum-income").innerText = formatCHF(inc);
+            document.getElementById("sum-invest").innerText = formatCHF(inv);
+            document.getElementById("sum-fixed").innerText = formatCHF(fix);
+            document.getElementById("sum-variable").innerText = formatCHF(varb + sack);
+        }
+
+        // --- 4. LOGIK: AUSGABEN-TRACKER (TAB 2) ---
+        let rawTrackerData = localStorage.getItem('tracker_data_v4');
+        let trackerData = rawTrackerData ? JSON.parse(rawTrackerData) : {};
+        
+        let currentDateTracker = new Date();
+        let currentMonthKey = `${currentDateTracker.getFullYear()}-${String(currentDateTracker.getMonth() + 1).padStart(2, '0')}`;
+        
+        const trackerCategories = ["Alltag", "Freizeit", "Transport", "Sonstiges", "Einmalig"];
+
+        function getMonthName(dateString) {
+            const [year, month] = dateString.split('-');
+            const date = new Date(year, month - 1);
+            return date.toLocaleString('de-CH', { month: 'long', year: 'numeric' });
+        }
+
+        function changeMonth(delta) {
+            let [year, month] = currentMonthKey.split('-').map(Number);
+            month += delta;
+            if (month > 12) { month = 1; year++; }
+            if (month < 1) { month = 12; year--; }
+            currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+            const searchInput = document.getElementById('tracker-search');
+            if(searchInput) searchInput.value = '';
+            renderTracker();
+        }
+
+        function saveTrackerData() {
+            localStorage.setItem('tracker_data_v4', JSON.stringify(trackerData));
+        }
+
+        function addTrackerRow() {
+            if (!trackerData[currentMonthKey]) trackerData[currentMonthKey] = [];
+            
+            let today = new Date();
+            let defaultDate = currentMonthKey === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}` 
+                              ? today.toISOString().split('T')[0] 
+                              : `${currentMonthKey}-01`;
+
+            trackerData[currentMonthKey].push({ date: defaultDate, type: "Ausgabe", desc: "", cat: "Alltag", amount: 0.00 });
+            
+            saveTrackerData();
+            renderTracker();
+        }
+
+        function updateTrackerData(index, field, value) {
+            if (field === 'amount') value = parseFloat(value) || 0;
+            trackerData[currentMonthKey][index][field] = value;
+            saveTrackerData();
+            renderTracker();
+        }
+
+        function deleteTrackerRow(index) {
+            trackerData[currentMonthKey].splice(index, 1);
+            saveTrackerData();
+            renderTracker();
+        }
+
+        function renderTracker() {
+            document.getElementById('tracker-month-display').innerText = getMonthName(currentMonthKey);
+            
+            const tbody = document.getElementById("tracker-body");
+            tbody.innerHTML = "";
+            
+            let entries = trackerData[currentMonthKey] || [];
+            
+            const searchInput = document.getElementById('tracker-search');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const isFiltering = searchTerm !== '';
+            let filteredSum = 0;
+            
+            let indexedEntries = entries.map((item, index) => ({ item, originalIndex: index }));
+            indexedEntries.sort((a, b) => new Date(a.item.date) - new Date(b.item.date));
+            
+            indexedEntries.forEach((entryObj) => {
+                const item = entryObj.item;
+                const index = entryObj.originalIndex;
+                if (!item.type) item.type = "Ausgabe";
+
+                if (isFiltering) {
+                    const matchDesc = item.desc.toLowerCase().includes(searchTerm);
+                    const matchCat = item.cat.toLowerCase().includes(searchTerm);
+                    
+                    if (!matchDesc && !matchCat) return; 
+                    
+                    if (item.type === "Ausgabe") filteredSum += item.amount;
+                    if (item.type === "Einnahme") filteredSum -= item.amount;
+                }
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><input type="date" value="${item.date}" onchange="updateTrackerData(${index}, 'date', this.value)"></td>
+                    <td>
+                        <select onchange="updateTrackerData(${index}, 'type', this.value)" style="color: ${item.type === 'Einnahme' ? 'var(--success)' : 'inherit'}; font-weight: bold;">
+                            <option value="Ausgabe" ${item.type === 'Ausgabe' ? 'selected' : ''}>📉 Ausgabe</option>
+                            <option value="Einnahme" ${item.type === 'Einnahme' ? 'selected' : ''}>📈 Einnahme</option>
+                        </select>
+                    </td>
+                    <td><input type="text" placeholder="Wofür / Woher?" value="${item.desc}" onchange="updateTrackerData(${index}, 'desc', this.value)"></td>
+                    <td>
+                        <select onchange="updateTrackerData(${index}, 'cat', this.value)">
+                            ${trackerCategories.map(c => `<option value="${c}" ${c === item.cat ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td><input type="number" step="0.01" value="${item.amount.toFixed(2)}" onchange="updateTrackerData(${index}, 'amount', this.value)" class="${item.type === 'Einnahme' ? 'text-success' : ''}"></td>
+                    <td><button class="btn btn-danger" onclick="deleteTrackerRow(${index})">X</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            const filterLabel = document.getElementById('filtered-total');
+            if (filterLabel) {
+                if (isFiltering) {
+                    filterLabel.style.display = 'inline-block';
+                    filterLabel.innerText = 'Gefilterte Ausgaben: ' + formatCHF(filteredSum);
+                } else {
+                    filterLabel.style.display = 'none';
+                }
+            }
+            
+            calculateTrackerTotals();
+        }
+
+        function calculateTrackerTotals() {
+            let budgetIncome = 0;
+            let budgetFixed = 0;
+            
+            initialData.forEach(item => {
+                if (item.typ === "Einnahmen") budgetIncome += item.betrag;
+                if (item.typ === "Fixkosten" || item.typ === "Sparen & Investieren") budgetFixed += item.betrag;
+            });
+
+            let entries = trackerData[currentMonthKey] || [];
+            let actualSpent = 0;
+            let extraIncome = 0;
+            
+            let catSums = { "Alltag": 0, "Freizeit": 0, "Transport": 0, "Sonstiges": 0, "Einmalig": 0 };
+
+            entries.forEach(item => {
+                if (!item.type) item.type = "Ausgabe";
+                
+                if (item.type === "Ausgabe") {
+                    actualSpent += item.amount;
+                    if (catSums[item.cat] !== undefined) {
+                        catSums[item.cat] += item.amount;
+                    }
+                } else if (item.type === "Einnahme") {
+                    extraIncome += item.amount;
+                }
+            });
+
+            let startBudget = budgetIncome - budgetFixed;
+            let rest = startBudget - actualSpent + extraIncome;
+
+            document.getElementById('trk-start').innerText = formatCHF(startBudget);
+            document.getElementById('trk-spent').innerText = formatCHF(actualSpent);
+            document.getElementById('trk-extra').innerText = formatCHF(extraIncome);
+            
+            let restEl = document.getElementById('trk-rest');
+            let restCard = document.getElementById('trk-rest-card');
+            restEl.innerText = formatCHF(rest);
+            
+            if (rest < 0) {
+                restEl.style.color = '#E74C3C';
+                restCard.style.borderBottomColor = '#E74C3C';
+            } else {
+                restEl.style.color = 'inherit';
+                restCard.style.borderBottomColor = 'var(--success)';
+            }
+            
+            document.getElementById('cat-sum-alltag').innerText = formatCHF(catSums["Alltag"]);
+            document.getElementById('cat-sum-freizeit').innerText = formatCHF(catSums["Freizeit"]);
+            document.getElementById('cat-sum-transport').innerText = formatCHF(catSums["Transport"]);
+            document.getElementById('cat-sum-sonstiges').innerText = formatCHF(catSums["Sonstiges"]);
+            document.getElementById('cat-sum-einmalig').innerText = formatCHF(catSums["Einmalig"]);
+        }
+
+        // --- 5. EXPORT & IMPORT FUNKTIONEN ---
+        function exportCSV() {
+            let csv = "Kategorie,Typ,Pro Monat (CHF),Pro Halbjahr (CHF),Pro Jahr (CHF),Details\n";
+            initialData.forEach(item => csv += `"${item.kategorie}","${item.typ}",${item.betrag.toFixed(2)},${(item.betrag * 6).toFixed(2)},${(item.betrag * 12).toFixed(2)},"${item.details}"\n`);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'Budget_Planer.csv'; a.click();
+        }
+
+        function exportTrackerCSV() {
+            let csv = "Monat,Datum,Typ,Beschreibung,Kategorie,Betrag (CHF)\n";
+            const months = Object.keys(trackerData).sort();
+            months.forEach(month => {
+                let entries = trackerData[month] || [];
+                entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+                entries.forEach(item => {
+                    let desc = item.desc ? item.desc.replace(/"/g, '""') : "";
+                    let type = item.type || "Ausgabe";
+                    csv += `"${month}","${item.date}","${type}","${desc}","${item.cat}",${item.amount.toFixed(2)}\n`;
+                });
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'Ausgaben_Tracker_Komplett.csv'; a.click();
+        }
+
+        // NEU: Import CSV für Budget
+        function importBudgetCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                let newData = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (cols.length >= 5) {
+                        const kat = cols[0].replace(/^"|"$/g, '').trim();
+                        if (kat.includes("Sackgeld (Rest)") || kat.includes("Sackgeld (Automatisch)")) continue;
+                        
+                        const typ = cols[1].replace(/^"|"$/g, '').trim();
+                        const betrag = parseFloat(cols[2]) || 0;
+                        const details = cols[5] ? cols[5].replace(/^"|"$/g, '').trim() : "";
+                        
+                        newData.push({kategorie: kat, typ: typ, betrag: betrag, details: details});
+                    }
+                }
+                if (newData.length > 0) {
+                    initialData = newData;
+                    saveBudgetData();
+                    renderBudgetTable();
+                    alert("✅ Budget erfolgreich importiert!");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset Input
+        }
+
+        // NEU: Import CSV für Tracker
+        function importTrackerCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+                let newTrackerData = {};
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (cols.length >= 6) {
+                        const monat = cols[0].replace(/^"|"$/g, '').trim();
+                        const datum = cols[1].replace(/^"|"$/g, '').trim();
+                        const typ = cols[2].replace(/^"|"$/g, '').trim();
+                        const desc = cols[3].replace(/^"|"$/g, '').trim();
+                        const cat = cols[4].replace(/^"|"$/g, '').trim();
+                        const amount = parseFloat(cols[5]) || 0;
+                        
+                        if (!newTrackerData[monat]) newTrackerData[monat] = [];
+                        newTrackerData[monat].push({ date: datum, type: typ, desc: desc, cat: cat, amount: amount });
+                    }
+                }
+                if (Object.keys(newTrackerData).length > 0) {
+                    trackerData = newTrackerData;
+                    saveTrackerData();
+                    // Springe automatisch zum neuesten importierten Monat
+                    const importedMonths = Object.keys(trackerData).sort();
+                    if (importedMonths.length > 0) {
+                        currentMonthKey = importedMonths[importedMonths.length - 1];
+                    }
+                    renderTracker();
+                    alert("✅ Ausgaben-Tracker erfolgreich importiert!");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset Input
+        }
+
+        // --- 6. INITIALISIERUNG ---
+        window.onload = function() {
+            loadBudgetData(); 
+            renderTracker();  
+        };
+    </script>
+</body>
+</html>
