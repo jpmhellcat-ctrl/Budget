@@ -281,6 +281,7 @@
             <button class="tab-btn active" id="btn-tab-budget" onclick="switchTab('budget')">📊 Budget-Planer</button>
             <button class="tab-btn" id="btn-tab-tracker" onclick="switchTab('tracker')">📅 Ausgaben-Tracker</button>
             <button class="tab-btn" id="btn-tab-stats" onclick="switchTab('stats')">📈 Jahresüberblick</button>
+            <button class="tab-btn" id="btn-tab-portfolio" onclick="switchTab('portfolio')">🏦 Vermögen & Portfolio</button>
         </div>
 
         <!-- ============================================== -->
@@ -393,6 +394,84 @@
             </div>
         </div>
         
+        
+        <!-- ============================================== -->
+        <!-- TAB 4: PORTFOLIO & VERMÖGEN                    -->
+        <!-- ============================================== -->
+        <div id="tab-portfolio" class="tab-content">
+            
+            <div class="summary-cards">
+                <div class="card income">
+                    <h3>Gesamtvermögen (Aktuell)</h3>
+                    <div class="value" id="port-total">0.00 CHF</div>
+                    <div class="sub-value">Summe aller erfassten Anlagen der letzten Messung.</div>
+                </div>
+                <div class="card">
+                    <h3>Swissquote & Bitcoin</h3>
+                    <div class="value" id="port-risk">0.00 CHF</div>
+                    <div class="sub-value">Volatiler Anteil deines Portfolios.</div>
+                </div>
+                <div class="card">
+                    <h3>Sparfond & Säule 3a</h3>
+                    <div class="value" id="port-safe">0.00 CHF</div>
+                    <div class="sub-value">Sicherer, stetiger Anteil deines Portfolios.</div>
+                </div>
+            </div>
+
+            <!-- Eingabemaske für neuen Eintrag -->
+            <div class="cat-breakdown" style="margin-top: 0; margin-bottom: 20px;">
+                <h4>➕ Neuen Portfolio-Stand erfassen</h4>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Datum</label>
+                        <input type="date" id="port-date" style="margin-top: 5px;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Swissquote (CHF)</label>
+                        <input type="number" id="port-sq" step="0.01" placeholder="0.00" style="margin-top: 5px;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Bitcoin (CHF)</label>
+                        <input type="number" id="port-btc" step="0.01" placeholder="0.00" style="margin-top: 5px;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Sparfond (CHF)</label>
+                        <input type="number" id="port-fond" step="0.01" placeholder="0.00" style="margin-top: 5px;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Säule 3a (CHF)</label>
+                        <input type="number" id="port-3a" step="0.01" placeholder="0.00" style="margin-top: 5px;">
+                    </div>
+                    <div>
+                        <button class="btn" style="background-color: var(--success); width: 100%;" onclick="addPortfolioRow()">Speichern</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container" style="height: 450px;">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+
+            <div class="table-container">
+                <table id="portfolio-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Datum</th>
+                            <th>Swissquote</th>
+                            <th>Bitcoin</th>
+                            <th>Sparfond</th>
+                            <th>Säule 3a</th>
+                            <th style="color: var(--success);">Gesamt (Net Worth)</th>
+                            <th style="width: 80px;">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-body">
+                        <!-- Portfolio Rows go here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ============================================== -->
         <!-- TAB 3: STATISTIKEN & JAHRESÜBERBLICK           -->
         <!-- ============================================== -->
@@ -470,6 +549,7 @@
 
             if (tabId === 'tracker') renderTracker(); 
             else if (tabId === 'stats') updateChart();
+            else if (tabId === 'portfolio') { renderPortfolio(); updatePortfolioChart(); }
         }
 
         // --- 3. BUDGET LOGIK ---
@@ -778,6 +858,7 @@
                 budget_data_v4: localStorage.getItem('budget_data_v4'),
                 sackgeld_details_v4: localStorage.getItem('sackgeld_details_v4'),
                 tracker_data_v4: localStorage.getItem('tracker_data_v4'),
+                portfolio_data_v1: localStorage.getItem('portfolio_data_v1'),
                 last_export_date_v4: new Date().getTime().toString()
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -794,6 +875,7 @@
                     if (data.budget_data_v4) localStorage.setItem('budget_data_v4', data.budget_data_v4);
                     if (data.sackgeld_details_v4 !== undefined) localStorage.setItem('sackgeld_details_v4', data.sackgeld_details_v4);
                     if (data.tracker_data_v4) localStorage.setItem('tracker_data_v4', data.tracker_data_v4);
+                    if (data.portfolio_data_v1) localStorage.setItem('portfolio_data_v1', data.portfolio_data_v1);
                     if (data.last_export_date_v4) localStorage.setItem('last_export_date_v4', data.last_export_date_v4);
                     
                     alert("✅ Komplett-Backup erfolgreich geladen!");
@@ -903,11 +985,155 @@
             window.myChartInstance = new Chart(ctx, chartConfig);
         }
 
-        // --- 8. INITIALISIERUNG ---
+        
+        // --- 9. PORTFOLIO LOGIK ---
+        let rawPortfolioData = localStorage.getItem('portfolio_data_v1');
+        let portfolioData = rawPortfolioData ? JSON.parse(rawPortfolioData) : [];
+        window.portfolioChartInstance = null;
+
+        function savePortfolioData() {
+            localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData));
+            updateExportDate(); // Triggers warning logic if JSON is exported
+        }
+
+        function addPortfolioRow() {
+            const dateVal = document.getElementById('port-date').value;
+            if (!dateVal) { alert("Bitte ein Datum auswählen!"); return; }
+            
+            const sq = parseFloat(document.getElementById('port-sq').value) || 0;
+            const btc = parseFloat(document.getElementById('port-btc').value) || 0;
+            const fond = parseFloat(document.getElementById('port-fond').value) || 0;
+            const s3a = parseFloat(document.getElementById('port-3a').value) || 0;
+
+            // Prüfen ob Datum schon existiert, falls ja, überschreiben, sonst neu
+            const existingIndex = portfolioData.findIndex(item => item.date === dateVal);
+            if (existingIndex >= 0) {
+                portfolioData[existingIndex] = { date: dateVal, sq, btc, fond, s3a };
+            } else {
+                portfolioData.push({ date: dateVal, sq, btc, fond, s3a });
+            }
+            
+            savePortfolioData();
+            
+            // Felder leeren, aber Datum auf heute setzen
+            document.getElementById('port-sq').value = '';
+            document.getElementById('port-btc').value = '';
+            document.getElementById('port-fond').value = '';
+            document.getElementById('port-3a').value = '';
+            
+            renderPortfolio();
+            updatePortfolioChart();
+        }
+
+        function deletePortfolioRow(index) {
+            if(confirm("Diesen Eintrag wirklich löschen?")) {
+                portfolioData.splice(index, 1);
+                savePortfolioData();
+                renderPortfolio();
+                updatePortfolioChart();
+            }
+        }
+
+        function renderPortfolio() {
+            // Immer aktuelles Datum vorschlagen, falls leer
+            if (!document.getElementById('port-date').value) {
+                document.getElementById('port-date').value = new Date().toISOString().split('T')[0];
+            }
+
+            // Nach Datum sortieren (neueste oben für die Tabelle)
+            let sortedData = [...portfolioData].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            const tbody = document.getElementById("portfolio-body");
+            tbody.innerHTML = "";
+            
+            sortedData.forEach((item) => {
+                // Finde Original-Index für Lösch-Button
+                const originalIndex = portfolioData.findIndex(p => p.date === item.date);
+                const total = item.sq + item.btc + item.fond + item.s3a;
+                
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td data-label="Datum"><b>${new Date(item.date).toLocaleDateString('de-CH')}</b></td>
+                    <td data-label="Swissquote">${formatCHF(item.sq)}</td>
+                    <td data-label="Bitcoin">${formatCHF(item.btc)}</td>
+                    <td data-label="Sparfond">${formatCHF(item.fond)}</td>
+                    <td data-label="Säule 3a">${formatCHF(item.s3a)}</td>
+                    <td data-label="Gesamt" style="color: var(--success); font-weight: bold; font-size: 16px;">${formatCHF(total)}</td>
+                    <td data-label="Aktion"><button class="btn btn-danger" onclick="deletePortfolioRow(${originalIndex})" style="width: 100%; padding: 6px;">X</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Summary Cards updaten (Nimmt immer den aktuellsten / neuesten Eintrag)
+            if (sortedData.length > 0) {
+                const latest = sortedData[0];
+                const risk = latest.sq + latest.btc;
+                const safe = latest.fond + latest.s3a;
+                const total = risk + safe;
+                
+                document.getElementById('port-total').innerText = formatCHF(total);
+                document.getElementById('port-risk').innerText = formatCHF(risk);
+                document.getElementById('port-safe').innerText = formatCHF(safe);
+            } else {
+                document.getElementById('port-total').innerText = "0.00 CHF";
+                document.getElementById('port-risk').innerText = "0.00 CHF";
+                document.getElementById('port-safe').innerText = "0.00 CHF";
+            }
+        }
+
+        function updatePortfolioChart() {
+            const ctx = document.getElementById('portfolioChart'); if(!ctx) return;
+            const isDark = document.body.classList.contains('dark-mode');
+            
+            Chart.defaults.color = isDark ? '#A0A0A0' : '#7F8C8D';
+            Chart.defaults.borderColor = isDark ? '#333333' : '#E0E6ED';
+
+            // Für das Diagramm chronologisch sortieren (älteste links, neueste rechts)
+            let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            const labels = chronologicalData.map(item => new Date(item.date).toLocaleDateString('de-CH'));
+            const sqData = chronologicalData.map(item => item.sq);
+            const btcData = chronologicalData.map(item => item.btc);
+            const fondData = chronologicalData.map(item => item.fond);
+            const s3aData = chronologicalData.map(item => item.s3a);
+            const totalData = chronologicalData.map(item => item.sq + item.btc + item.fond + item.s3a);
+
+            let chartConfig = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Gesamtvermögen (Net Worth)', data: totalData, borderColor: '#27AE60', backgroundColor: 'rgba(39, 174, 96, 0.1)', borderWidth: 4, tension: 0.3, fill: true, order: 1 },
+                        { label: 'Swissquote', data: sqData, borderColor: '#3498DB', backgroundColor: '#3498DB', borderWidth: 2, tension: 0.3, order: 2 },
+                        { label: 'Bitcoin', data: btcData, borderColor: '#F39C12', backgroundColor: '#F39C12', borderWidth: 2, tension: 0.3, order: 3 },
+                        { label: 'Sparfond', data: fondData, borderColor: '#9B59B6', backgroundColor: '#9B59B6', borderWidth: 2, tension: 0.3, order: 4 },
+                        { label: 'Säule 3a', data: s3aData, borderColor: '#34495E', backgroundColor: '#34495E', borderWidth: 2, tension: 0.3, order: 5 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: { position: 'top' },
+                        tooltip: { callbacks: { label: function(c) { let l=c.dataset.label||''; if(l)l+=': '; if(c.parsed.y!==null) l+=new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(c.parsed.y); return l; } } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { callback: function(value) { return value + ' CHF'; } } }
+                    }
+                }
+            };
+
+            if (window.portfolioChartInstance) window.portfolioChartInstance.destroy();
+            window.portfolioChartInstance = new Chart(ctx, chartConfig);
+        }
+
+
+        // --- 10. INITIALISIERUNG ---
         window.onload = function() {
             checkBackupStatus();
             loadBudgetData(); 
-            renderTracker();  
+            renderTracker();
+            renderPortfolio();  
         };
     </script>
 </body>
