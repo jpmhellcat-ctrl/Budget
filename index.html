@@ -1498,10 +1498,10 @@
             sortedData.forEach((item, idx) => {
                 const originalIndex = portfolioData.findIndex(p => p.date === item.date);
                 
-                // Fallback Logik für alte Snapshots ohne Live-Werte
-                const privatVal = (idx === 0) ? currentBalances.privat : (item.privat !== undefined ? item.privat : currentBalances.privat);
-                const sparkontoVal = (idx === 0) ? currentBalances.sparkonto : (item.sparkonto !== undefined ? item.sparkonto : (item.sparkonto_alt || 0));
-                const bargeldVal = (idx === 0) ? currentBalances.bargeld : (item.bargeld !== undefined ? item.bargeld : 0);
+                // Starre Snapshot-Werte (keine Live-Überschreibung mehr)
+                const privatVal = item.privat !== undefined ? item.privat : 0;
+                const sparkontoVal = item.sparkonto !== undefined ? item.sparkonto : 0;
+                const bargeldVal = item.bargeld !== undefined ? item.bargeld : 0;
                 
                 const total = privatVal + sparkontoVal + bargeldVal + item.sq + item.btc + item.fond + item.s3a;
                 
@@ -1549,9 +1549,9 @@
             let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
             
             const labels = chronologicalData.map(item => new Date(item.date).toLocaleDateString('de-CH'));
-            const privatData = chronologicalData.map((item, idx) => (idx === chronologicalData.length - 1) ? currentBalances.privat : (item.privat !== undefined ? item.privat : currentBalances.privat));
-            const sparkontoData = chronologicalData.map((item, idx) => (idx === chronologicalData.length - 1) ? currentBalances.sparkonto : (item.sparkonto !== undefined ? item.sparkonto : 0));
-            const bargeldData = chronologicalData.map((item, idx) => (idx === chronologicalData.length - 1) ? currentBalances.bargeld : (item.bargeld !== undefined ? item.bargeld : 0));
+            const privatData = chronologicalData.map(item => item.privat !== undefined ? item.privat : 0);
+            const sparkontoData = chronologicalData.map(item => item.sparkonto !== undefined ? item.sparkonto : 0);
+            const bargeldData = chronologicalData.map(item => item.bargeld !== undefined ? item.bargeld : 0);
             
             const sqData = chronologicalData.map(item => item.sq);
             const btcData = chronologicalData.map(item => item.btc);
