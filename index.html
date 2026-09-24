@@ -222,7 +222,7 @@
             .summary-cards { grid-template-columns: 1fr; gap: 15px; }
             .actions-bar { flex-direction: column; align-items: stretch; gap: 15px; }
             .actions-bar > div, .btn-group-right { width: 100%; flex-direction: column; gap: 10px; }
-            .btn, input#tracker-search, select#tracker-cat-filter, select#tracker-quick-add { width: 100%; margin: 0 !important; max-width: none !important; }
+            .btn, input#tracker-search, select#tracker-cat-filter { width: 100%; margin: 0 !important; max-width: none; }
             
             .month-nav { flex-wrap: wrap; padding: 15px 10px; }
             .month-nav span { flex: 1 1 100%; text-align: center; order: -1; margin-bottom: 15px; }
@@ -426,12 +426,12 @@
                 <div class="card">
                     <h3>Liquide Mittel</h3>
                     <div class="value" id="port-liquid">0.00 CHF</div>
-                    <div class="sub-value">Live-Wert aus Privat, Sparkonto & Bargeld.</div>
+                    <div class="sub-value">Privat, Sparkonto & Bargeld.</div>
                 </div>
                 <div class="card">
                     <h3>Investiert (Wertschriften, Krypto & 3a)</h3>
                     <div class="value" id="port-invest">0.00 CHF</div>
-                    <div class="sub-value">Letzter Snapshot: Swissquote, Bitcoin, Sparfond & Säule 3a.</div>
+                    <div class="sub-value">Swissquote, Bitcoin, Sparfond & Säule 3a.</div>
                 </div>
             </div>
 
@@ -535,6 +535,7 @@
                             <th>Sparfond</th>
                             <th>Säule 3a</th>
                             <th style="color: var(--success);">Gesamt</th>
+                            <th>Performance</th>
                             <th style="width: 70px;">Aktion</th>
                         </tr>
                     </thead>
@@ -1153,10 +1154,12 @@
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 6) { 
+                        // Fallback altes Format (Spalte 0 war Tag)
                         const kat = cols[1].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)") || kat.includes("Sackgeld (Automatisch)")) continue;
                         newData.push({kategorie: kat, typ: cols[2].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[3]) || 0, details: cols[6] ? cols[6].replace(/^"|"$/g, '').trim() : ""});
                     } else if (cols.length === 5) { 
+                        // Neues Format
                         const kat = cols[0].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)")) continue;
                         newData.push({kategorie: kat, typ: cols[1].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[2]) || 0, details: cols[4] ? cols[4].replace(/^"|"$/g, '').trim() : ""});
@@ -1386,6 +1389,7 @@
                     const amt = parseFloat(e.amount) || 0;
                     const d = e.date;
 
+                    // Ausgaben / Einnahmen / Transfers vom Quellkonto
                     if (source === 'Privatkonto' && (!cutPrivat || d > cutPrivat)) {
                         if (e.type === 'Einnahme') balances.privat += amt;
                         else balances.privat -= amt; 
@@ -1397,6 +1401,7 @@
                         else balances.bargeld -= amt;
                     }
 
+                    // Geldfluss zum Zielkonto
                     if (e.type === 'Transfer') {
                         if (target === 'Privatkonto' && (!cutPrivat || d > cutPrivat)) balances.privat += amt;
                         else if (target === 'Sparkonto' && (!cutSpar || d > cutSpar)) balances.sparkonto += amt;
@@ -1436,7 +1441,6 @@
                     (trackerData[mKey] || []).forEach(e => {
                         const is3aTransfer = (e.type === 'Transfer' && e.targetAccount === 'Säule 3a');
                         const is3aDesc = (e.desc || '').toLowerCase().includes('3a') || (e.desc || '').toLowerCase().includes('säule');
-                        
                         if (is3aTransfer || (e.cat === 'Sparen' && is3aDesc)) {
                             currentPaid += (parseFloat(e.amount) || 0);
                         }
@@ -1552,6 +1556,7 @@
                 enrichedData.push({
                     ...item, total, privatVal, sparkontoVal, bargeldVal, sqVal, btcVal, fondVal, s3aVal,
                     perfTotal: calcDiff(total, prevItem.total),
+                    perfTotalStart: calcDiff(total, firstItem.total),
                     perfPrivat: calcDiff(privatVal, prevItem.privat),
                     perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto),
                     perfBargeld: calcDiff(bargeldVal, prevItem.bargeld),
@@ -1575,6 +1580,22 @@
                 let sign = perfObj.diffPrev > 0 ? '+' : '';
                 return `<div style="color: ${color}; font-size: 10.5px; margin-top: 3px; font-weight: bold;">${sign}${formatCHF(perfObj.diffPrev)} (${sign}${perfObj.pctPrev.toFixed(1)}%)</div>`;
             };
+
+            const formatFullPerf = (perfPrev, perfStart) => {
+                let html = '';
+                if(perfPrev.diffPrev !== 0) {
+                    let colorPrev = perfPrev.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
+                    let signPrev = perfPrev.diffPrev > 0 ? '+' : '';
+                    html += `<div style="color: ${colorPrev}; font-size: 11px; margin-bottom: 4px;"><b>Letzter:</b> ${signPrev}${formatCHF(perfPrev.diffPrev)}<br>(${signPrev}${perfPrev.pctPrev.toFixed(1)}%)</div>`;
+                }
+                if(perfStart.diffPrev !== 0) {
+                    let colorStart = perfStart.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
+                    let signStart = perfStart.diffPrev > 0 ? '+' : '';
+                    html += `<div style="color: ${colorStart}; font-size: 11px;"><b>Start:</b> ${signStart}${formatCHF(perfStart.diffPrev)}<br>(${signStart}${perfStart.pctPrev.toFixed(1)}%)</div>`;
+                }
+                if(html === '') return '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
+                return html;
+            };
             
             enrichedData.forEach((item) => {
                 const tr = document.createElement("tr");
@@ -1589,7 +1610,9 @@
                     <td data-label="Säule 3a"><div>${formatCHF(item.s3aVal)}</div>${formatInlinePerf(item.perfS3a)}</td>
                     <td data-label="Gesamt" style="font-weight: bold; font-size: 15px;">
                         <div style="color: var(--success);">${formatCHF(item.total)}</div>
-                        ${formatInlinePerf(item.perfTotal)}
+                    </td>
+                    <td data-label="Performance" style="min-width: 120px;">
+                        ${formatFullPerf(item.perfTotal, item.perfTotalStart)}
                     </td>
                     <td data-label="Aktion"><button class="btn btn-danger" onclick="deletePortfolioRow(${item.originalIndex})" style="width: 100%; padding: 6px;">X</button></td>
                 `;
