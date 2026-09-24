@@ -352,7 +352,7 @@
             </div>
 
             <div class="summary-cards">
-                <div class="card"><h3>Start-Budget (Lohn - Fixkosten)</h3><div class="value" id="trk-start">0.00 CHF</div><div class="sub-value">Verfügbar für Transport, Alltag & Freizeit.</div></div>
+                <div class="card" id="trk-start-card"><h3>Start-Budget (Lohn - Fixkosten)</h3><div class="value" id="trk-start">0.00 CHF</div><div class="sub-value">Verfügbar für Transport, Alltag & Freizeit.</div></div>
                 <div class="card warning"><h3>Ausgaben (Total)</h3><div class="value" id="trk-spent">0.00 CHF</div><div class="sub-value">Summe deiner variablen Ausgaben.</div></div>
                 <div class="card income"><h3>Zusätzliche Einnahmen</h3><div class="value" id="trk-extra">0.00 CHF</div><div class="sub-value">Rückzahlungen und Zusatzeinnahmen.</div></div>
                 <div class="card income" id="trk-rest-card"><h3>Aktueller Restbetrag</h3><div class="value" id="trk-rest">0.00 CHF</div><div class="sub-value">Noch verfügbar im Monat.</div></div>
@@ -1023,13 +1023,12 @@
         }
 
         function calculateTrackerTotals() {
-            let budgetIncome = 0; let budgetFixed = 0;
-            initialData.forEach(item => {
-                if (item.typ === "Einnahmen") budgetIncome += item.betrag;
-                if (item.typ === "Fixkosten" || item.typ === "Sparen & Investieren") budgetFixed += item.betrag;
-            });
             let entries = trackerData[currentMonthKey] || [];
-            let actualSpent = 0; let extraIncome = 0;
+            
+            let actualLohn = 0;
+            let actualFixkosten = 0;
+            let actualSpent = 0; 
+            let extraIncome = 0;
             let catSums = { "Alltag": 0, "Freizeit": 0, "Transport": 0, "Sonstiges": 0, "Einmalig": 0, "Geschäftsauslagen": 0 };
 
             entries.forEach(item => {
@@ -1037,37 +1036,67 @@
                 const cat = item.cat || "Alltag";
                 const type = item.type || "Ausgabe";
 
+                // Geschäftsauslagen als reinen Durchlaufposten aus der Kalkulation heraushalten
                 if (cat === "Geschäftsauslagen") {
                     if (type === "Ausgabe") catSums["Geschäftsauslagen"] += amt;
                     else if (type === "Einnahme") catSums["Geschäftsauslagen"] -= amt;
                     return; 
                 }
 
-                if (type === "Ausgabe") {
-                    if (cat !== "Fixkosten") {
-                        actualSpent += amt;
+                if (type === "Ausgabe" || type === "Transfer") {
+                    if (cat === "Fixkosten" || cat === "Sparen") {
+                        actualFixkosten += amt; // Zählt als gebundenes Budget
+                    } else if (type === "Ausgabe") {
+                        actualSpent += amt; // Variable Alltagsausgaben
                         if (catSums[cat] !== undefined) catSums[cat] += amt;
                     }
                 } else if (type === "Einnahme") {
-                    if (cat !== "Sonstiges") { 
+                    // Erkennt den Hauptlohn automatisch anhand des Wortes "lohn", "gehalt" oder "einnahmen"
+                    const descLower = (item.desc || "").toLowerCase();
+                    if (descLower.includes("lohn") || descLower.includes("gehalt") || descLower.includes("einnahmen")) {
+                        actualLohn += amt;
+                    } else {
                         extraIncome += amt; 
-                    } else if (!item.desc.toLowerCase().includes("lohn") && !item.desc.toLowerCase().includes("gehalt")) {
-                        extraIncome += amt;
                     }
                 }
             });
 
-            let startBudget = budgetIncome - budgetFixed;
+            // Start-Budget ist jetzt rein aus den echten Tracker-Einträgen berechnet
+            let startBudget = actualLohn - actualFixkosten;
             let rest = startBudget - actualSpent + extraIncome;
 
-            document.getElementById('trk-start').innerText = formatCHF(startBudget);
+            let startEl = document.getElementById('trk-start');
+            let startCard = document.getElementById('trk-start-card');
+
+            // Visuelle Warnung, falls im aktuellen Monat noch kein Lohn verbucht wurde
+            if (actualLohn === 0 && actualFixkosten === 0 && actualSpent === 0) {
+                 startEl.innerText = "0.00 CHF";
+                 startEl.style.color = 'inherit';
+                 startCard.style.borderBottomColor = 'var(--accent)';
+            } else if (actualLohn === 0 && entries.length > 0) {
+                 startEl.innerText = "⚠️ Lohn fehlt!";
+                 startEl.style.color = '#E74C3C';
+                 startCard.style.borderBottomColor = '#E74C3C';
+            } else {
+                 startEl.innerText = formatCHF(startBudget);
+                 startEl.style.color = 'inherit';
+                 startCard.style.borderBottomColor = 'var(--accent)';
+            }
+
             document.getElementById('trk-spent').innerText = formatCHF(actualSpent);
             document.getElementById('trk-extra').innerText = formatCHF(extraIncome);
             
-            let restEl = document.getElementById('trk-rest'); let restCard = document.getElementById('trk-rest-card');
+            let restEl = document.getElementById('trk-rest'); 
+            let restCard = document.getElementById('trk-rest-card');
             restEl.innerText = formatCHF(rest);
-            if (rest < 0) { restEl.style.color = '#E74C3C'; restCard.style.borderBottomColor = '#E74C3C'; } 
-            else { restEl.style.color = 'inherit'; restCard.style.borderBottomColor = 'var(--success)'; }
+            
+            if (rest < 0) { 
+                restEl.style.color = '#E74C3C'; 
+                restCard.style.borderBottomColor = '#E74C3C'; 
+            } else { 
+                restEl.style.color = 'inherit'; 
+                restCard.style.borderBottomColor = 'var(--success)'; 
+            }
             
             document.getElementById('cat-sum-alltag').innerText = formatCHF(catSums["Alltag"]);
             document.getElementById('cat-sum-freizeit').innerText = formatCHF(catSums["Freizeit"]);
@@ -1136,13 +1165,10 @@
                         const monat = cols[0].replace(/^"|"$/g, '').trim();
                         if (!newTrackerData[monat]) newTrackerData[monat] = [];
                         if (cols.length >= 8) {
-                            // Neues Format
                             newTrackerData[monat].push({ date: cols[1].replace(/^"|"$/g, '').trim(), sourceAccount: cols[2].replace(/^"|"$/g, '').trim(), type: cols[3].replace(/^"|"$/g, '').trim(), targetAccount: cols[4].replace(/^"|"$/g, '').trim(), desc: cols[5].replace(/^"|"$/g, '').trim(), cat: cols[6].replace(/^"|"$/g, '').trim(), amount: parseFloat(cols[7]) || 0 });
                         } else if (cols.length === 7) {
-                            // Altes Format (7 Spalten)
                             newTrackerData[monat].push({ date: cols[1].replace(/^"|"$/g, '').trim(), sourceAccount: "Privatkonto", type: cols[2].replace(/^"|"$/g, '').trim(), targetAccount: cols[3].replace(/^"|"$/g, '').trim(), desc: cols[4].replace(/^"|"$/g, '').trim(), cat: cols[5].replace(/^"|"$/g, '').trim(), amount: parseFloat(cols[6]) || 0 });
                         } else {
-                            // Ganz altes Format (6 Spalten)
                             newTrackerData[monat].push({ date: cols[1].replace(/^"|"$/g, '').trim(), sourceAccount: "Privatkonto", type: cols[2].replace(/^"|"$/g, '').trim(), targetAccount: "", desc: cols[3].replace(/^"|"$/g, '').trim(), cat: cols[4].replace(/^"|"$/g, '').trim(), amount: parseFloat(cols[5]) || 0 });
                         }
                     }
@@ -1238,41 +1264,42 @@
             const monthsRaw = Object.keys(trackerData).sort();
             const monthLabels = monthsRaw.map(m => getMonthName(m));
             
-            let budgetIncome = 0; let budgetFixed = 0;
-            initialData.forEach(item => {
-                if (item.typ === "Einnahmen") budgetIncome += item.betrag;
-                if (item.typ === "Fixkosten" || item.typ === "Sparen & Investieren") budgetFixed += item.betrag;
-            });
-
             let alltagData = [], freizeitData = [], transportData = [], sonstigesData = [], einmaligData = [];
             let totalSpentData = [], totalIncomeData = [], fixedCostData = [], variableCostData = [], profitData = [];
 
             monthsRaw.forEach(month => {
                 let a = 0, f = 0, t = 0, s = 0, e = 0;
-                let varSpent = 0, income = budgetIncome;
+                let varSpent = 0;
+                let actualMonthIncome = 0; 
+                let actualMonthFixed = 0;
                 
                 let entries = trackerData[month] || [];
                 entries.forEach(item => {
-                    let type = item.type || "Ausgabe"; let cat = item.cat || "Alltag";
-                    if (type === "Ausgabe" && cat !== "Geschäftsauslagen" && cat !== "Fixkosten") {
-                        varSpent += item.amount;
-                        if(cat === "Alltag") a += item.amount; if(cat === "Freizeit") f += item.amount;
-                        if(cat === "Transport") t += item.amount; if(cat === "Sonstiges") s += item.amount;
-                        if(cat === "Einmalig") e += item.amount;
-                    }
-                    if (type === "Einnahme" && cat !== "Geschäftsauslagen") {
-                        if (!item.desc.toLowerCase().includes("lohn") && !item.desc.toLowerCase().includes("gehalt")) {
-                            income += item.amount; 
+                    let type = item.type || "Ausgabe"; 
+                    let cat = item.cat || "Alltag";
+                    
+                    if (cat === "Geschäftsauslagen") return; // Verfälscht die Statistik nicht
+
+                    if (type === "Ausgabe" || type === "Transfer") {
+                        if (cat === "Fixkosten" || cat === "Sparen") {
+                            actualMonthFixed += item.amount;
+                        } else if (type === "Ausgabe") {
+                            varSpent += item.amount;
+                            if(cat === "Alltag") a += item.amount; if(cat === "Freizeit") f += item.amount;
+                            if(cat === "Transport") t += item.amount; if(cat === "Sonstiges") s += item.amount;
+                            if(cat === "Einmalig") e += item.amount;
                         }
+                    } else if (type === "Einnahme") {
+                        actualMonthIncome += item.amount;
                     }
                 });
                 
                 alltagData.push(a); freizeitData.push(f); transportData.push(t); sonstigesData.push(s); einmaligData.push(e);
-                fixedCostData.push(budgetFixed);
+                fixedCostData.push(actualMonthFixed);
                 variableCostData.push(varSpent);
-                totalSpentData.push(budgetFixed + varSpent);
-                totalIncomeData.push(income);
-                profitData.push(income - (budgetFixed + varSpent));
+                totalSpentData.push(actualMonthFixed + varSpent);
+                totalIncomeData.push(actualMonthIncome);
+                profitData.push(actualMonthIncome - (actualMonthFixed + varSpent));
             });
 
             let chartConfig = {
@@ -1300,7 +1327,7 @@
                 ];
             } else if (chartType === 'total') {
                 chartConfig.data.datasets = [
-                    { label: 'Fixkosten & Sparen (Budget)', data: fixedCostData, backgroundColor: isDark ? '#2C3E50' : '#34495E' },
+                    { label: 'Fixkosten & Sparen (Aus Tracker)', data: fixedCostData, backgroundColor: isDark ? '#2C3E50' : '#34495E' },
                     { label: 'Variable Ausgaben (Tracker)', data: variableCostData, backgroundColor: '#E74C3C' }
                 ];
                 chartConfig.options.scales.x.stacked = true;
@@ -1545,10 +1572,11 @@
             Chart.defaults.color = isDark ? '#A0A0A0' : '#7F8C8D';
             Chart.defaults.borderColor = isDark ? '#333333' : '#E0E6ED';
 
-            const currentBalances = getCalculatedBalances();
             let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
             
             const labels = chronologicalData.map(item => new Date(item.date).toLocaleDateString('de-CH'));
+            
+            // Starre Snapshot-Werte für das Diagramm
             const privatData = chronologicalData.map(item => item.privat !== undefined ? item.privat : 0);
             const sparkontoData = chronologicalData.map(item => item.sparkonto !== undefined ? item.sparkonto : 0);
             const bargeldData = chronologicalData.map(item => item.bargeld !== undefined ? item.bargeld : 0);
