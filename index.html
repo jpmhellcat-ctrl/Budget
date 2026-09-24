@@ -310,7 +310,6 @@
                 <table id="budget-table">
                     <thead>
                         <tr>
-                            <th class="sortable" onclick="sortBudget('tag')" style="width: 70px;">Tag <span id="sort-icon-b-tag">⬍</span></th>
                             <th class="sortable" onclick="sortBudget('kategorie')">Kategorie <span id="sort-icon-b-kategorie">⬍</span></th>
                             <th class="sortable" onclick="sortBudget('typ')">Typ <span id="sort-icon-b-typ">⬍</span></th>
                             <th class="sortable" onclick="sortBudget('betrag')" style="min-width: 110px;">Pro Monat <span id="sort-icon-b-betrag">⬍</span></th>
@@ -323,7 +322,6 @@
                     <tbody id="table-body"></tbody>
                     <tfoot>
                         <tr>
-                            <td class="hide-on-mobile"></td>
                             <td class="hide-on-mobile"><input type="text" class="readonly-text" value="Sackgeld (Rest)" readonly></td>
                             <td class="hide-on-mobile"><input type="text" class="readonly-text" value="Freizeit" readonly></td>
                             <td data-label="Sackgeld (Pro Monat)" id="sackgeld-month" class="sackgeld-val" style="font-size: 18px;">0.00</td>
@@ -385,15 +383,15 @@
             </div>
 
             <div class="table-container">
-                <table id="budget-table">
+                <table id="tracker-table">
                     <thead>
                         <tr>
-                            <th class="sortable" onclick="sortBudget('kategorie')">Kategorie <span id="sort-icon-b-kategorie">⬍</span></th>
-                            <th class="sortable" onclick="sortBudget('typ')">Typ <span id="sort-icon-b-typ">⬍</span></th>
-                            <th class="sortable" onclick="sortBudget('betrag')" style="min-width: 110px;">Pro Monat <span id="sort-icon-b-betrag">⬍</span></th>
-                            <th style="min-width: 110px;">Halbes Jahr</th>
-                            <th class="sortable" onclick="sortTracker('amount')" style="width: 150px;">Betrag (CHF) <span id="sort-icon-t-amount">⬍</span></th>
-                            <th style="width: 80px;">Aktion</th>
+                            <th class="sortable" onclick="sortTracker('date')">Datum <span id="sort-icon-t-date">⬍</span></th>
+                            <th class="sortable" onclick="sortTracker('type')">Konto & Typ <span id="sort-icon-t-type">⬍</span></th>
+                            <th class="sortable" onclick="sortTracker('desc')">Beschreibung <span id="sort-icon-t-desc">⬍</span></th>
+                            <th class="sortable" onclick="sortTracker('cat')">Kategorie <span id="sort-icon-t-cat">⬍</span></th>
+                            <th class="sortable" onclick="sortTracker('amount')" style="width: 120px;">Betrag (CHF) <span id="sort-icon-t-amount">⬍</span></th>
+                            <th style="min-width: 130px;">Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="tracker-body"></tbody>
@@ -559,7 +557,6 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Automatische Migration
         if (localStorage.getItem('startsaldo')) {
             localStorage.setItem('startsaldo_privat', localStorage.getItem('startsaldo'));
             localStorage.removeItem('startsaldo');
@@ -857,7 +854,6 @@
             saveTrackerData();
             renderTracker();
             
-            // Dropdown zurücksetzen
             document.getElementById('tracker-quick-add').value = "";
         }
 
@@ -986,7 +982,6 @@
                     let filterName = 'Filter';
                     if (onlySpesenFilter) filterName = 'Geschäftsauslagen Netto';
                     else if (catFilter) filterName = catFilter;
-                    // Format output logically for negatives
                     filterLabel.innerText = `Gefiltert (${filterName}): ` + (filteredSum < 0 ? "-" + formatCHF(Math.abs(filteredSum)) : formatCHF(filteredSum)); 
                 } else { 
                     filterLabel.style.display = 'none'; 
