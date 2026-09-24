@@ -392,8 +392,8 @@
                             <th class="sortable" onclick="sortTracker('type')">Konto & Typ <span id="sort-icon-t-type">⬍</span></th>
                             <th class="sortable" onclick="sortTracker('desc')">Beschreibung <span id="sort-icon-t-desc">⬍</span></th>
                             <th class="sortable" onclick="sortTracker('cat')">Kategorie <span id="sort-icon-t-cat">⬍</span></th>
-                            <th class="sortable" onclick="sortTracker('amount')" style="width: 120px;">Betrag (CHF) <span id="sort-icon-t-amount">⬍</span></th>
-                            <th style="min-width: 130px;">Aktion</th>
+                            <th class="sortable" onclick="sortTracker('amount')" style="width: 150px;">Betrag (CHF) <span id="sort-icon-t-amount">⬍</span></th>
+                            <th style="width: 80px;">Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="tracker-body"></tbody>
@@ -426,12 +426,12 @@
                 <div class="card">
                     <h3>Liquide Mittel</h3>
                     <div class="value" id="port-liquid">0.00 CHF</div>
-                    <div class="sub-value">Privat, Sparkonto & Bargeld.</div>
+                    <div class="sub-value">Live-Wert aus Privat, Sparkonto & Bargeld.</div>
                 </div>
                 <div class="card">
                     <h3>Investiert (Wertschriften, Krypto & 3a)</h3>
                     <div class="value" id="port-invest">0.00 CHF</div>
-                    <div class="sub-value">Swissquote, Bitcoin, Sparfond & Säule 3a.</div>
+                    <div class="sub-value">Letzter Snapshot: Swissquote, Bitcoin, Sparfond & Säule 3a.</div>
                 </div>
             </div>
 
@@ -510,7 +510,7 @@
             </div>
             
             <div class="actions-bar" style="justify-content: flex-end; margin-bottom: 10px;">
-                <select id="portfolio-chart-filter" onchange="updatePortfolioChart()" style="max-width: 250px; margin: 0;">
+                <select id="portfolio-chart-filter" onchange="updatePortfolioChart()" style="max-width: 250px; margin: 0; font-weight: bold;">
                     <option value="all">Alle Linien anzeigen</option>
                     <option value="total">Nur Gesamtvermögen</option>
                     <option value="liquid">Nur Liquide Mittel</option>
@@ -535,7 +535,6 @@
                             <th>Sparfond</th>
                             <th>Säule 3a</th>
                             <th style="color: var(--success);">Gesamt</th>
-                            <th>Performance</th>
                             <th style="width: 70px;">Aktion</th>
                         </tr>
                     </thead>
@@ -569,6 +568,7 @@
             return `${year}-${month}-${day}`;
         }
 
+        // Automatische Migration
         if (localStorage.getItem('startsaldo')) {
             localStorage.setItem('startsaldo_privat', localStorage.getItem('startsaldo'));
             localStorage.removeItem('startsaldo');
@@ -866,7 +866,6 @@
             saveTrackerData();
             renderTracker();
             
-            // Dropdown zurücksetzen
             document.getElementById('tracker-quick-add').value = "";
         }
 
@@ -995,7 +994,6 @@
                     let filterName = 'Filter';
                     if (onlySpesenFilter) filterName = 'Geschäftsauslagen Netto';
                     else if (catFilter) filterName = catFilter;
-                    // Format output logically for negatives
                     filterLabel.innerText = `Gefiltert (${filterName}): ` + (filteredSum < 0 ? "-" + formatCHF(Math.abs(filteredSum)) : formatCHF(filteredSum)); 
                 } else { 
                     filterLabel.style.display = 'none'; 
@@ -1155,12 +1153,10 @@
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 6) { 
-                        // Fallback altes Format (Spalte 0 war Tag)
                         const kat = cols[1].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)") || kat.includes("Sackgeld (Automatisch)")) continue;
                         newData.push({kategorie: kat, typ: cols[2].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[3]) || 0, details: cols[6] ? cols[6].replace(/^"|"$/g, '').trim() : ""});
                     } else if (cols.length === 5) { 
-                        // Neues Format
                         const kat = cols[0].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)")) continue;
                         newData.push({kategorie: kat, typ: cols[1].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[2]) || 0, details: cols[4] ? cols[4].replace(/^"|"$/g, '').trim() : ""});
@@ -1390,7 +1386,6 @@
                     const amt = parseFloat(e.amount) || 0;
                     const d = e.date;
 
-                    // Ausgaben / Einnahmen / Transfers vom Quellkonto
                     if (source === 'Privatkonto' && (!cutPrivat || d > cutPrivat)) {
                         if (e.type === 'Einnahme') balances.privat += amt;
                         else balances.privat -= amt; 
@@ -1402,7 +1397,6 @@
                         else balances.bargeld -= amt;
                     }
 
-                    // Geldfluss zum Zielkonto
                     if (e.type === 'Transfer') {
                         if (target === 'Privatkonto' && (!cutPrivat || d > cutPrivat)) balances.privat += amt;
                         else if (target === 'Sparkonto' && (!cutSpar || d > cutSpar)) balances.sparkonto += amt;
@@ -1440,11 +1434,8 @@
             Object.keys(trackerData).forEach(mKey => {
                 if (mKey.startsWith(currentYear)) {
                     (trackerData[mKey] || []).forEach(e => {
-                        const targetSafe = e.targetAccount || '';
-                        const descSafe = (e.desc || '').toLowerCase();
-                        
-                        const is3aTransfer = (e.type === 'Transfer' && targetSafe === 'Säule 3a');
-                        const is3aDesc = descSafe.includes('3a') || descSafe.includes('säule');
+                        const is3aTransfer = (e.type === 'Transfer' && e.targetAccount === 'Säule 3a');
+                        const is3aDesc = (e.desc || '').toLowerCase().includes('3a') || (e.desc || '').toLowerCase().includes('säule');
                         
                         if (is3aTransfer || (e.cat === 'Sparen' && is3aDesc)) {
                             currentPaid += (parseFloat(e.amount) || 0);
@@ -1551,25 +1542,23 @@
 
                 let prevItem = idx > 0 ? enrichedData[idx-1] : firstItem;
 
-                const calcDiff = (curr, prev, first) => {
+                const calcDiff = (curr, prev) => {
                     return {
                         diffPrev: curr - prev,
-                        pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0,
-                        diffStart: curr - first,
-                        pctStart: first !== 0 ? ((curr - first) / first) * 100 : 0
+                        pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0
                     };
                 };
 
                 enrichedData.push({
                     ...item, total, privatVal, sparkontoVal, bargeldVal, sqVal, btcVal, fondVal, s3aVal,
-                    perfTotal: calcDiff(total, prevItem.total, firstItem.total),
-                    perfPrivat: calcDiff(privatVal, prevItem.privat, firstItem.privat),
-                    perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto, firstItem.sparkonto),
-                    perfBargeld: calcDiff(bargeldVal, prevItem.bargeld, firstItem.bargeld),
-                    perfSq: calcDiff(sqVal, prevItem.sq, firstItem.sq),
-                    perfBtc: calcDiff(btcVal, prevItem.btc, firstItem.btc),
-                    perfFond: calcDiff(fondVal, prevItem.fond, firstItem.fond),
-                    perfS3a: calcDiff(s3aVal, prevItem.s3a, firstItem.s3a),
+                    perfTotal: calcDiff(total, prevItem.total),
+                    perfPrivat: calcDiff(privatVal, prevItem.privat),
+                    perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto),
+                    perfBargeld: calcDiff(bargeldVal, prevItem.bargeld),
+                    perfSq: calcDiff(sqVal, prevItem.sq),
+                    perfBtc: calcDiff(btcVal, prevItem.btc),
+                    perfFond: calcDiff(fondVal, prevItem.fond),
+                    perfS3a: calcDiff(s3aVal, prevItem.s3a),
                     originalIndex: portfolioData.findIndex(p => p.date === item.date)
                 });
             });
@@ -1580,86 +1569,45 @@
             const tbody = document.getElementById("portfolio-body");
             tbody.innerHTML = "";
             
+            const formatInlinePerf = (perfObj) => {
+                if(perfObj.diffPrev === 0) return '';
+                let color = perfObj.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
+                let sign = perfObj.diffPrev > 0 ? '+' : '';
+                return `<div style="color: ${color}; font-size: 10.5px; margin-top: 3px; font-weight: bold;">${sign}${formatCHF(perfObj.diffPrev)} (${sign}${perfObj.pctPrev.toFixed(1)}%)</div>`;
+            };
+            
             enrichedData.forEach((item) => {
-                const formatPerfDetail = (name, perfObj) => {
-                    if(perfObj.diffPrev === 0 && perfObj.diffStart === 0) return '';
-                    let cP = perfObj.diffPrev >= 0 ? 'var(--success)' : '#E74C3C';
-                    let sP = perfObj.diffPrev > 0 ? '+' : '';
-                    let cS = perfObj.diffStart >= 0 ? 'var(--success)' : '#E74C3C';
-                    let sS = perfObj.diffStart > 0 ? '+' : '';
-                    return `<div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid var(--border); padding-bottom: 3px;">
-                        <strong>${name}:</strong> 
-                        <span style="text-align: right;">
-                            <span style="color: ${cP}; display: block;">Letzter: ${sP}${formatCHF(perfObj.diffPrev)} (${sP}${perfObj.pctPrev.toFixed(1)}%)</span>
-                            <span style="color: ${cS}; font-size: 10px;">Start: ${sS}${formatCHF(perfObj.diffStart)} (${sS}${perfObj.pctStart.toFixed(1)}%)</span>
-                        </span>
-                    </div>`;
-                };
-
-                let perfHtml = `<div style="font-size: 11.5px; line-height: 1.4;">`;
-                if(item.perfTotal.diffPrev === 0 && item.perfTotal.diffStart === 0) {
-                    perfHtml += `<span style="color: var(--text-muted)">- Startpunkt -</span>`;
-                } else {
-                    let colorPrev = item.perfTotal.diffPrev >= 0 ? 'var(--success)' : '#E74C3C';
-                    let signPrev = item.perfTotal.diffPrev > 0 ? '+' : '';
-                    perfHtml += `<div style="color: ${colorPrev}; font-weight: bold; font-size: 12.5px;">Letzter: ${signPrev}${formatCHF(item.perfTotal.diffPrev)} (${signPrev}${item.perfTotal.pctPrev.toFixed(1)}%)</div>`;
-                    
-                    let colorStart = item.perfTotal.diffStart >= 0 ? 'var(--success)' : '#E74C3C';
-                    let signStart = item.perfTotal.diffStart > 0 ? '+' : '';
-                    perfHtml += `<div style="color: ${colorStart}">Start: ${signStart}${formatCHF(item.perfTotal.diffStart)} (${signStart}${item.perfTotal.pctStart.toFixed(1)}%)</div>`;
-                }
-                
-                let detailsHtml = formatPerfDetail('Privatkonto', item.perfPrivat) +
-                                  formatPerfDetail('Sparkonto', item.perfSparkonto) +
-                                  formatPerfDetail('Bargeld', item.perfBargeld) +
-                                  formatPerfDetail('Swissquote', item.perfSq) +
-                                  formatPerfDetail('Bitcoin', item.perfBtc) +
-                                  formatPerfDetail('Sparfond', item.perfFond) +
-                                  formatPerfDetail('Säule 3a', item.perfS3a);
-
-                if (detailsHtml !== '') {
-                    perfHtml += `<details style="margin-top: 8px; cursor: pointer;">
-                        <summary style="color: var(--accent); font-weight: 600; outline: none; margin-bottom: 5px;">Einzel-Details ▼</summary>
-                        <div style="padding: 8px; background: var(--bg); border-radius: 6px; font-size: 11px;">
-                            ${detailsHtml}
-                        </div>
-                    </details>`;
-                }
-                perfHtml += `</div>`;
-
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td data-label="Datum"><b>${new Date(item.date).toLocaleDateString('de-CH')}</b></td>
-                    <td data-label="Privatkonto">${formatCHF(item.privatVal)}</td>
-                    <td data-label="Sparkonto">${formatCHF(item.sparkontoVal)}</td>
-                    <td data-label="Bargeld">${formatCHF(item.bargeldVal)}</td>
-                    <td data-label="Swissquote">${formatCHF(item.sqVal)}</td>
-                    <td data-label="Bitcoin">${formatCHF(item.btcVal)}</td>
-                    <td data-label="Sparfond">${formatCHF(item.fondVal)}</td>
-                    <td data-label="Säule 3a">${formatCHF(item.s3aVal)}</td>
-                    <td data-label="Gesamt" style="color: var(--success); font-weight: bold; font-size: 16px;">${formatCHF(item.total)}</td>
-                    <td data-label="Performance">${perfHtml}</td>
+                    <td data-label="Privatkonto"><div>${formatCHF(item.privatVal)}</div>${formatInlinePerf(item.perfPrivat)}</td>
+                    <td data-label="Sparkonto"><div>${formatCHF(item.sparkontoVal)}</div>${formatInlinePerf(item.perfSparkonto)}</td>
+                    <td data-label="Bargeld"><div>${formatCHF(item.bargeldVal)}</div>${formatInlinePerf(item.perfBargeld)}</td>
+                    <td data-label="Swissquote"><div>${formatCHF(item.sqVal)}</div>${formatInlinePerf(item.perfSq)}</td>
+                    <td data-label="Bitcoin"><div>${formatCHF(item.btcVal)}</div>${formatInlinePerf(item.perfBtc)}</td>
+                    <td data-label="Sparfond"><div>${formatCHF(item.fondVal)}</div>${formatInlinePerf(item.perfFond)}</td>
+                    <td data-label="Säule 3a"><div>${formatCHF(item.s3aVal)}</div>${formatInlinePerf(item.perfS3a)}</td>
+                    <td data-label="Gesamt" style="font-weight: bold; font-size: 15px;">
+                        <div style="color: var(--success);">${formatCHF(item.total)}</div>
+                        ${formatInlinePerf(item.perfTotal)}
+                    </td>
                     <td data-label="Aktion"><button class="btn btn-danger" onclick="deletePortfolioRow(${item.originalIndex})" style="width: 100%; padding: 6px;">X</button></td>
                 `;
                 tbody.appendChild(tr);
             });
             
-            // Fix für Bug 1: Übersicht oben updaten
+            // Übersichtskarten updaten (Live Liquide Mittel + Letzte Investitionen)
+            let liquid = currentBalances.privat + currentBalances.sparkonto + currentBalances.bargeld;
+            let invest = 0;
             if (enrichedData.length > 0) {
-                const latest = enrichedData[0];
-                const liquid = latest.privatVal + latest.sparkontoVal + latest.bargeldVal;
-                const invest = latest.sqVal + latest.btcVal + latest.fondVal + latest.s3aVal;
-                const netWorth = latest.total;
-                
-                document.getElementById('port-total').innerText = formatCHF(netWorth);
-                document.getElementById('port-liquid').innerText = formatCHF(liquid);
-                document.getElementById('port-invest').innerText = formatCHF(invest);
-            } else {
-                const liquid = currentBalances.privat + currentBalances.sparkonto + currentBalances.bargeld;
-                document.getElementById('port-total').innerText = formatCHF(liquid);
-                document.getElementById('port-liquid').innerText = formatCHF(liquid);
-                document.getElementById('port-invest').innerText = "0.00 CHF";
+                const latest = enrichedData[0]; // Das ist jetzt der aktuellste Snapshot (da reverse())
+                invest = latest.sqVal + latest.btcVal + latest.fondVal + latest.s3aVal;
             }
+            let netWorth = liquid + invest;
+            
+            document.getElementById('port-total').innerText = formatCHF(netWorth);
+            document.getElementById('port-liquid').innerText = formatCHF(liquid);
+            document.getElementById('port-invest').innerText = formatCHF(invest);
         }
 
         function updatePortfolioChart() {
