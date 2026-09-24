@@ -158,7 +158,7 @@
             overflow-x: auto; max-height: 600px; margin-bottom: 20px;
         }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
         thead th {
             position: sticky; top: 0; background-color: var(--primary); color: white;
             font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; z-index: 10;
@@ -206,6 +206,27 @@
 
         .live-boxes-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 25px;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); z-index: 999; justify-content: center; align-items: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-content {
+            background: var(--card-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative;
+        }
+        .modal-content h3 { margin-top: 0; color: var(--primary); }
+        .modal-close {
+            position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: var(--text-muted);
+        }
+        .modal-close:hover { color: var(--text); }
+        .cat-list { list-style: none; padding: 0; margin: 20px 0; max-height: 300px; overflow-y: auto; }
+        .cat-list li {
+            display: flex; justify-content: space-between; align-items: center; padding: 10px;
+            background: var(--bg); margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--border);
         }
 
         @media (max-width: 900px) {
@@ -259,8 +280,24 @@
     </style>
 </head>
 <body>
+    <div id="category-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeCategoryModal()">&times;</span>
+            <h3>⚙️ Portfolio-Kategorien</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Erstelle deine eigenen Anlage-Kategorien (Krypto, ETF, Neon, etc.). Diese werden überall im Tool automatisch ergänzt.</p>
+            
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="new-cat-input" placeholder="Neue Kategorie...">
+                <button class="btn" onclick="addInvestCat()" style="background: var(--success);">Hinzufügen</button>
+            </div>
+            
+            <ul class="cat-list" id="modal-cat-list">
+                <!-- Dynamisch generiert -->
+            </ul>
+        </div>
+    </div>
+
     <div class="container">
-        
         <div id="backup-warning">
             ⚠️ Achtung: Dein letztes Backup ist schon länger als 14 Tage her. Bitte exportiere deine Daten!
         </div>
@@ -285,6 +322,7 @@
             <button class="tab-btn" id="btn-tab-portfolio" onclick="switchTab('portfolio')">🏦 Vermögen & Portfolio</button>
         </div>
 
+        <!-- BUDGET TAB -->
         <div id="tab-budget" class="tab-content active">
             <div class="summary-cards">
                 <div class="card income"><h3>Nettolohn</h3><div class="value" id="sum-income">0.00 CHF</div></div>
@@ -335,8 +373,8 @@
             </div>
         </div>
 
+        <!-- TRACKER TAB -->
         <div id="tab-tracker" class="tab-content">
-            
             <div class="month-nav">
                 <button class="btn btn-icon" onclick="changeMonth(-1)">◄ Vorheriger</button>
                 <span id="tracker-month-display">Lade...</span>
@@ -415,8 +453,8 @@
             </div>
         </div>
         
+        <!-- PORTFOLIO TAB -->
         <div id="tab-portfolio" class="tab-content">
-            
             <div class="summary-cards">
                 <div class="card income">
                     <h3>Gesamtvermögen (Net Worth)</h3>
@@ -429,9 +467,9 @@
                     <div class="sub-value">Privat, Sparkonto & Bargeld.</div>
                 </div>
                 <div class="card">
-                    <h3>Investiert (Wertschriften, Krypto & 3a)</h3>
+                    <h3>Investiert (Snapshots)</h3>
                     <div class="value" id="port-invest">0.00 CHF</div>
-                    <div class="sub-value">Swissquote, Bitcoin, Sparfond & Säule 3a.</div>
+                    <div class="sub-value">Summe der eigenen Anlage-Kategorien.</div>
                 </div>
             </div>
 
@@ -447,7 +485,6 @@
                 <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0;">Berechnet sich live aus allen Säule 3a Transfers im Tracker des aktuellen Jahres.</p>
             </div>
 
-            <!-- 3 LIVE BERECHNUNGS BOXEN -->
             <div class="live-boxes-grid">
                 <!-- Privatkonto -->
                 <div class="card" style="margin-bottom: 0; border-left: 4px solid var(--primary);">
@@ -481,28 +518,22 @@
             </div>
 
             <div class="extra-box" style="margin-bottom: 20px;">
-                <h4>➕ Neuen Investitions-Snapshot erfassen</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
+                    <h4 style="margin: 0;">➕ Neuen Investitions-Snapshot erfassen</h4>
+                    <button class="btn btn-filter" onclick="openCategoryModal()">⚙️ Kategorien verwalten</button>
+                </div>
+                
+                <!-- Dynamischer Input Bereich -->
                 <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
                     <div style="flex: 1; min-width: 130px;">
                         <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Datum</label>
                         <input type="date" id="port-date" style="margin-top: 5px;">
                     </div>
-                    <div style="flex: 1; min-width: 130px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Swissquote (CHF)</label>
-                        <input type="number" id="port-sq" step="0.01" placeholder="0.00" style="margin-top: 5px;">
+                    
+                    <div id="dynamic-portfolio-inputs" style="display: flex; gap: 12px; flex-wrap: wrap; flex: 4;">
+                        <!-- Wird via JS generiert -->
                     </div>
-                    <div style="flex: 1; min-width: 130px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Bitcoin (CHF)</label>
-                        <input type="number" id="port-btc" step="0.01" placeholder="0.00" style="margin-top: 5px;">
-                    </div>
-                    <div style="flex: 1; min-width: 130px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Sparfond (CHF)</label>
-                        <input type="number" id="port-fond" step="0.01" placeholder="0.00" style="margin-top: 5px;">
-                    </div>
-                    <div style="flex: 1; min-width: 130px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Säule 3a (CHF)</label>
-                        <input type="number" id="port-3a" step="0.01" placeholder="0.00" style="margin-top: 5px;">
-                    </div>
+
                     <div>
                         <button class="btn" style="background-color: var(--success); width: 100%;" onclick="addPortfolioRow()">Speichern</button>
                     </div>
@@ -524,20 +555,8 @@
 
             <div class="table-container">
                 <table id="portfolio-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 110px;">Datum</th>
-                            <th>Privatkonto</th>
-                            <th>Sparkonto</th>
-                            <th>Bargeld</th>
-                            <th>Swissquote</th>
-                            <th>Bitcoin</th>
-                            <th>Sparfond</th>
-                            <th>Säule 3a</th>
-                            <th style="color: var(--success);">Gesamt</th>
-                            <th>Performance</th>
-                            <th style="width: 70px;">Aktion</th>
-                        </tr>
+                    <thead id="portfolio-table-head">
+                        <!-- Wird via JS generiert -->
                     </thead>
                     <tbody id="portfolio-body"></tbody>
                 </table>
@@ -545,6 +564,7 @@
 
         </div>
 
+        <!-- STATS TAB -->
         <div id="tab-stats" class="tab-content">
             <div class="actions-bar">
                 <select id="chart-type-selector" onchange="updateChart()" style="max-width: 300px;">
@@ -569,7 +589,7 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Automatische Migration
+        // Automatische Migration der Startsaldi
         if (localStorage.getItem('startsaldo')) {
             localStorage.setItem('startsaldo_privat', localStorage.getItem('startsaldo'));
             localStorage.removeItem('startsaldo');
@@ -584,6 +604,12 @@
         let budgetSortField = null;
         let budgetSortAsc = true;
         let onlySpesenFilter = false;
+        
+        // Dynamische Investment Kategorien
+        const defaultInvestCats = ["Swissquote", "Bitcoin", "Sparfond", "Säule 3a"];
+        let investCats = JSON.parse(localStorage.getItem('invest_cats_v1')) || defaultInvestCats;
+
+        const chartColors = ['#3498DB', '#E67E22', '#9B59B6', '#7F8C8D', '#1ABC9C', '#D35400', '#E74C3C', '#34495E', '#F1C40F'];
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
@@ -610,6 +636,13 @@
             return amount.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " CHF";
         }
         
+        function formatInlinePerf(perfObj) {
+            if(perfObj.diffPrev === 0) return '';
+            let color = perfObj.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
+            let sign = perfObj.diffPrev > 0 ? '+' : '';
+            return `<div style="color: ${color}; font-size: 10.5px; margin-top: 3px; font-weight: bold;">${sign}${formatCHF(perfObj.diffPrev)} (${sign}${perfObj.pctPrev.toFixed(1)}%)</div>`;
+        }
+
         function checkBackupStatus() {
             const lastExport = localStorage.getItem('last_export_date_v4');
             const warningEl = document.getElementById('backup-warning');
@@ -617,12 +650,12 @@
             
             if (!lastExport) {
                 warningEl.style.display = 'block';
-                labelEl.innerText = "Noch kein Backup erstellt!";
+                if(labelEl) labelEl.innerText = "Noch kein Backup erstellt!";
                 return;
             }
             
             const lastDate = new Date(parseInt(lastExport));
-            labelEl.innerText = "Letztes Backup: " + lastDate.toLocaleDateString('de-CH');
+            if(labelEl) labelEl.innerText = "Letztes Backup: " + lastDate.toLocaleDateString('de-CH');
             
             const daysSince = (new Date().getTime() - lastDate.getTime()) / (1000 * 3600 * 24);
             if (daysSince > 14) {
@@ -637,6 +670,61 @@
             checkBackupStatus();
         }
 
+        function openCategoryModal() {
+            document.getElementById('category-modal').style.display = 'flex';
+            renderCategoryManager();
+        }
+        
+        function closeCategoryModal() {
+            document.getElementById('category-modal').style.display = 'none';
+        }
+
+        function renderCategoryManager() {
+            const list = document.getElementById('modal-cat-list');
+            list.innerHTML = "";
+            investCats.forEach((cat, index) => {
+                list.innerHTML += `
+                    <li>
+                        <span style="font-weight: bold;">${cat}</span>
+                        <button class="btn btn-danger" style="padding: 6px 10px;" onclick="deleteInvestCat(${index})">Löschen</button>
+                    </li>
+                `;
+            });
+        }
+
+        function addInvestCat() {
+            const input = document.getElementById('new-cat-input');
+            const val = input.value.trim();
+            if(val && !investCats.includes(val)) {
+                investCats.push(val);
+                saveInvestCats();
+                input.value = "";
+                renderCategoryManager();
+                refreshPortfolioUI();
+            }
+        }
+
+        function deleteInvestCat(index) {
+            const catName = investCats[index];
+            if(confirm(`Kategorie '${catName}' wirklich löschen? Historische Daten bleiben in der Datenbank erhalten, werden aber ausgeblendet.`)) {
+                investCats.splice(index, 1);
+                saveInvestCats();
+                renderCategoryManager();
+                refreshPortfolioUI();
+            }
+        }
+
+        function saveInvestCats() {
+            localStorage.setItem('invest_cats_v1', JSON.stringify(investCats));
+        }
+
+        function refreshPortfolioUI() {
+            renderTracker(); // Zielkonten updaten
+            renderPortfolioInputs();
+            renderPortfolio();
+            updatePortfolioChart();
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -647,8 +735,7 @@
             else if (tabId === 'stats') updateChart();
             else if (tabId === 'portfolio') { 
                 calculateLiveBalances(); 
-                renderPortfolio(); 
-                updatePortfolioChart(); 
+                refreshPortfolioUI();
                 updateS3aProgress(); 
             }
         }
@@ -785,7 +872,7 @@
         let currentMonthKey = `${currentDateTracker.getFullYear()}-${String(currentDateTracker.getMonth() + 1).padStart(2, '0')}`;
         
         const trackerCategories = ["Lohn", "Alltag", "Freizeit", "Transport", "Sonstiges", "Einmalig", "Geschäftsauslagen", "Fixkosten", "Sparen", "Bargeld"];
-        const transferAccounts = ["Privatkonto", "Sparkonto", "Bargeld", "Sparfond", "Swissquote", "Säule 3a", "Bitcoin"];
+        const baseTransferAccounts = ["Privatkonto", "Sparkonto", "Bargeld"];
 
         function getMonthName(dateString) {
             if(!dateString) return "";
@@ -843,16 +930,21 @@
                 type = "Transfer";
                 cat = "Sparen";
                 
+                // Smart Match für Target Account basierend auf dynamischen Kategorien
                 let nameLower = item.kategorie.toLowerCase();
-                if(nameLower.includes("swissquote") || nameLower.includes("depot")) target = "Swissquote";
-                else if(nameLower.includes("3a") || nameLower.includes("säule")) target = "Säule 3a";
-                else if(nameLower.includes("bitcoin") || nameLower.includes("krypto")) target = "Bitcoin";
-                else if(nameLower.includes("sparfond") || nameLower.includes("fond")) target = "Sparfond";
-                else target = "Sparkonto";
+                let matched = false;
+                investCats.forEach(invCat => {
+                    if (nameLower.includes(invCat.toLowerCase())) { target = invCat; matched = true; }
+                });
+                
+                if(!matched) {
+                    if(nameLower.includes("3a") || nameLower.includes("säule")) target = "Säule 3a";
+                    else if(nameLower.includes("bitcoin") || nameLower.includes("krypto")) target = "Bitcoin";
+                    else target = "Sparkonto";
+                }
             }
 
-            const todayStr = getTodayString();
-            const entryDate = currentMonthKey === todayStr.substring(0, 7) ? todayStr : `${currentMonthKey}-01`;
+            const entryDate = getTodayString();
 
             trackerData[currentMonthKey].push({
                 date: entryDate,
@@ -937,6 +1029,9 @@
                     return trackerSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                 }
             });
+
+            // Dynamische Transfer-Ziele bauen
+            const transferAccounts = [...baseTransferAccounts, ...investCats];
             
             indexedEntries.forEach((entryObj) => {
                 const item = entryObj.item; const index = entryObj.originalIndex;
@@ -1154,7 +1249,7 @@
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 6) { 
-                        // Fallback altes Format (Spalte 0 war Tag)
+                        // Fallback altes Format
                         const kat = cols[1].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)") || kat.includes("Sackgeld (Automatisch)")) continue;
                         newData.push({kategorie: kat, typ: cols[2].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[3]) || 0, details: cols[6] ? cols[6].replace(/^"|"$/g, '').trim() : ""});
@@ -1205,6 +1300,7 @@
                 sackgeld_details_v4: localStorage.getItem('sackgeld_details_v4'),
                 tracker_data_v4: localStorage.getItem('tracker_data_v4'),
                 portfolio_data_v1: localStorage.getItem('portfolio_data_v1'),
+                invest_cats_v1: localStorage.getItem('invest_cats_v1'),
                 
                 startsaldo_privat: localStorage.getItem('startsaldo_privat'),
                 startsaldo_datum_privat: localStorage.getItem('startsaldo_datum_privat'),
@@ -1232,6 +1328,7 @@
                     if (data.sackgeld_details_v4 !== undefined) localStorage.setItem('sackgeld_details_v4', data.sackgeld_details_v4);
                     if (data.tracker_data_v4) localStorage.setItem('tracker_data_v4', data.tracker_data_v4);
                     if (data.portfolio_data_v1) localStorage.setItem('portfolio_data_v1', data.portfolio_data_v1);
+                    if (data.invest_cats_v1) localStorage.setItem('invest_cats_v1', data.invest_cats_v1);
                     
                     if (data.startsaldo_privat) localStorage.setItem('startsaldo_privat', data.startsaldo_privat);
                     if (data.startsaldo_datum_privat) localStorage.setItem('startsaldo_datum_privat', data.startsaldo_datum_privat);
@@ -1365,8 +1462,7 @@
             localStorage.setItem('startsaldo_datum_bargeld', document.getElementById('startsaldo_datum_bargeld').value);
             
             calculateLiveBalances();
-            renderPortfolio();
-            updatePortfolioChart();
+            refreshPortfolioUI();
         }
 
         function getCalculatedBalances() {
@@ -1439,7 +1535,7 @@
             Object.keys(trackerData).forEach(mKey => {
                 if (mKey.startsWith(currentYear)) {
                     (trackerData[mKey] || []).forEach(e => {
-                        const is3aTransfer = (e.type === 'Transfer' && e.targetAccount === 'Säule 3a');
+                        const is3aTransfer = (e.type === 'Transfer' && (e.targetAccount === 'Säule 3a' || e.targetAccount.toLowerCase().includes('3a')));
                         const is3aDesc = (e.desc || '').toLowerCase().includes('3a') || (e.desc || '').toLowerCase().includes('säule');
                         if (is3aTransfer || (e.cat === 'Sparen' && is3aDesc)) {
                             currentPaid += (parseFloat(e.amount) || 0);
@@ -1462,20 +1558,54 @@
         let portfolioData = rawPortfolioData ? JSON.parse(rawPortfolioData) : [];
         window.portfolioChartInstance = null;
 
+        // Auto-Migration für dynamische Kategorien
+        let needsSave = false;
+        portfolioData = portfolioData.map(item => {
+            if (item.assets) return item; // Schon migriert
+            needsSave = true;
+            let newAssets = {};
+            if (item.sq !== undefined) newAssets["Swissquote"] = item.sq;
+            if (item.btc !== undefined) newAssets["Bitcoin"] = item.btc;
+            if (item.fond !== undefined) newAssets["Sparfond"] = item.fond;
+            if (item.s3a !== undefined) newAssets["Säule 3a"] = item.s3a;
+            
+            return {
+                date: item.date, privat: item.privat, sparkonto: item.sparkonto, bargeld: item.bargeld,
+                assets: newAssets
+            };
+        });
+        if (needsSave) localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData));
+
         function savePortfolioData() {
             localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData));
             updateExportDate();
         }
 
+        function renderPortfolioInputs() {
+            const container = document.getElementById('dynamic-portfolio-inputs');
+            if(!container) return;
+            container.innerHTML = "";
+            
+            investCats.forEach(cat => {
+                container.innerHTML += `
+                    <div style="flex: 1; min-width: 130px;">
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${cat}</label>
+                        <input type="number" id="port-val-${cat.replace(/\s+/g, '-')}" step="0.01" placeholder="0.00" style="margin-top: 5px;">
+                    </div>
+                `;
+            });
+        }
+
         function addPortfolioRow() {
             const dateVal = document.getElementById('port-date').value || getTodayString();
-            
-            const sq = parseFloat(document.getElementById('port-sq').value) || 0;
-            const btc = parseFloat(document.getElementById('port-btc').value) || 0;
-            const fond = parseFloat(document.getElementById('port-fond').value) || 0;
-            const s3a = parseFloat(document.getElementById('port-3a').value) || 0;
-
             const currentBalances = getCalculatedBalances();
+            
+            let currentAssets = {};
+            investCats.forEach(cat => {
+                const el = document.getElementById(`port-val-${cat.replace(/\s+/g, '-')}`);
+                currentAssets[cat] = parseFloat(el.value) || 0;
+                el.value = '';
+            });
 
             const existingIndex = portfolioData.findIndex(item => item.date === dateVal);
             if (existingIndex >= 0) {
@@ -1484,7 +1614,7 @@
                     privat: currentBalances.privat, 
                     sparkonto: currentBalances.sparkonto, 
                     bargeld: currentBalances.bargeld, 
-                    sq, btc, fond, s3a 
+                    assets: currentAssets 
                 };
             } else {
                 portfolioData.push({ 
@@ -1492,126 +1622,122 @@
                     privat: currentBalances.privat, 
                     sparkonto: currentBalances.sparkonto, 
                     bargeld: currentBalances.bargeld, 
-                    sq, btc, fond, s3a 
+                    assets: currentAssets 
                 });
             }
             
             savePortfolioData();
-            
-            document.getElementById('port-sq').value = '';
-            document.getElementById('port-btc').value = '';
-            document.getElementById('port-fond').value = '';
-            document.getElementById('port-3a').value = '';
             document.getElementById('port-date').value = getTodayString();
-            
-            renderPortfolio();
-            updatePortfolioChart();
-            updateS3aProgress();
+            refreshPortfolioUI();
         }
 
         function deletePortfolioRow(index) {
             if(confirm("Diesen Snapshot wirklich löschen?")) {
                 portfolioData.splice(index, 1);
                 savePortfolioData();
-                renderPortfolio();
-                updatePortfolioChart();
+                refreshPortfolioUI();
             }
         }
 
         function renderPortfolio() {
             const portDateInput = document.getElementById('port-date');
-            if (portDateInput && !portDateInput.value) {
-                portDateInput.value = getTodayString();
-            }
+            if (portDateInput && !portDateInput.value) portDateInput.value = getTodayString();
 
             const currentBalances = getCalculatedBalances();
             
-            // 1. Chronologisch sortieren für korrekte Performance-Rechnung (Alt nach Neu)
+            // Kopfzeile dynamisch bauen
+            const thead = document.getElementById("portfolio-table-head");
+            let thHtml = `<tr><th style="width: 110px;">Datum</th><th>Privatkonto</th><th>Sparkonto</th><th>Bargeld</th>`;
+            investCats.forEach(cat => { thHtml += `<th>${cat}</th>`; });
+            thHtml += `<th style="color: var(--success);">Gesamt</th><th>Performance</th><th style="width: 70px;">Aktion</th></tr>`;
+            thead.innerHTML = thHtml;
+
+            // Chronologisch sortieren für korrekte Performance-Rechnung (Alt nach Neu)
             let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
             let enrichedData = [];
             let firstItem = null;
+
+            const calcDiff = (curr, prev) => {
+                return {
+                    diffPrev: curr - prev,
+                    pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0
+                };
+            };
 
             chronologicalData.forEach((item, idx) => {
                 const privatVal = item.privat !== undefined ? item.privat : 0;
                 const sparkontoVal = item.sparkonto !== undefined ? item.sparkonto : 0;
                 const bargeldVal = item.bargeld !== undefined ? item.bargeld : 0;
-                const sqVal = item.sq || 0;
-                const btcVal = item.btc || 0;
-                const fondVal = item.fond || 0;
-                const s3aVal = item.s3a || 0;
+                
+                let assetsSum = 0;
+                let currentAssets = item.assets || {};
+                Object.values(currentAssets).forEach(v => assetsSum += v);
+                
+                const total = privatVal + sparkontoVal + bargeldVal + assetsSum;
 
-                const total = privatVal + sparkontoVal + bargeldVal + sqVal + btcVal + fondVal + s3aVal;
-
-                if (idx === 0) firstItem = { total, privat: privatVal, sparkonto: sparkontoVal, bargeld: bargeldVal, sq: sqVal, btc: btcVal, fond: fondVal, s3a: s3aVal };
+                if (idx === 0) firstItem = { total, privat: privatVal, sparkonto: sparkontoVal, bargeld: bargeldVal, assets: currentAssets };
 
                 let prevItem = idx > 0 ? enrichedData[idx-1] : firstItem;
+                let prevAssets = prevItem.assets || {};
 
-                const calcDiff = (curr, prev) => {
-                    return {
-                        diffPrev: curr - prev,
-                        pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0
-                    };
-                };
+                let perfAssets = {};
+                investCats.forEach(cat => {
+                    let cVal = currentAssets[cat] || 0;
+                    let pVal = prevAssets[cat] || 0;
+                    perfAssets[cat] = calcDiff(cVal, pVal);
+                });
 
                 enrichedData.push({
-                    ...item, total, privatVal, sparkontoVal, bargeldVal, sqVal, btcVal, fondVal, s3aVal,
+                    ...item, total, privatVal, sparkontoVal, bargeldVal, assetsSum, currentAssets, perfAssets,
                     perfTotal: calcDiff(total, prevItem.total),
                     perfTotalStart: calcDiff(total, firstItem.total),
                     perfPrivat: calcDiff(privatVal, prevItem.privat),
                     perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto),
                     perfBargeld: calcDiff(bargeldVal, prevItem.bargeld),
-                    perfSq: calcDiff(sqVal, prevItem.sq),
-                    perfBtc: calcDiff(btcVal, prevItem.btc),
-                    perfFond: calcDiff(fondVal, prevItem.fond),
-                    perfS3a: calcDiff(s3aVal, prevItem.s3a),
                     originalIndex: portfolioData.findIndex(p => p.date === item.date)
                 });
             });
 
-            // 2. Umdrehen für die Anzeige in der Tabelle (Neu nach Alt)
+            // Umdrehen für die Anzeige in der Tabelle (Neu nach Alt)
             enrichedData.reverse();
 
             const tbody = document.getElementById("portfolio-body");
             tbody.innerHTML = "";
-            
-            const formatInlinePerf = (perfObj) => {
-                if(perfObj.diffPrev === 0) return '';
-                let color = perfObj.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
-                let sign = perfObj.diffPrev > 0 ? '+' : '';
-                return `<div style="color: ${color}; font-size: 10.5px; margin-top: 3px; font-weight: bold;">${sign}${formatCHF(perfObj.diffPrev)} (${sign}${perfObj.pctPrev.toFixed(1)}%)</div>`;
-            };
 
             const formatFullPerf = (perfPrev, perfStart) => {
                 let html = '';
                 if(perfPrev.diffPrev !== 0) {
                     let colorPrev = perfPrev.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
                     let signPrev = perfPrev.diffPrev > 0 ? '+' : '';
-                    html += `<div style="color: ${colorPrev}; font-size: 11px; margin-bottom: 4px;"><b>Letzter:</b> ${signPrev}${formatCHF(perfPrev.diffPrev)}<br>(${signPrev}${perfPrev.pctPrev.toFixed(1)}%)</div>`;
+                    html += `<div style="color: ${colorPrev}; font-size: 11px; margin-bottom: 4px;">Letzter: ${signPrev}${formatCHF(perfPrev.diffPrev)}<br>(${signPrev}${perfPrev.pctPrev.toFixed(1)}%)</div>`;
                 }
                 if(perfStart.diffPrev !== 0) {
                     let colorStart = perfStart.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
                     let signStart = perfStart.diffPrev > 0 ? '+' : '';
-                    html += `<div style="color: ${colorStart}; font-size: 11px;"><b>Start:</b> ${signStart}${formatCHF(perfStart.diffPrev)}<br>(${signStart}${perfStart.pctPrev.toFixed(1)}%)</div>`;
+                    html += `<div style="color: ${colorStart}; font-size: 11px;">Start: ${signStart}${formatCHF(perfStart.diffPrev)}<br>(${signStart}${perfStart.pctPrev.toFixed(1)}%)</div>`;
                 }
                 if(html === '') return '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
                 return html;
             };
             
             enrichedData.forEach((item) => {
+                let dynamicTdHtml = '';
+                investCats.forEach(cat => {
+                    let val = item.currentAssets[cat] || 0;
+                    dynamicTdHtml += `<td data-label="${cat}"><div>${formatCHF(val)}</div>${formatInlinePerf(item.perfAssets[cat])}</td>`;
+                });
+
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td data-label="Datum"><b>${new Date(item.date).toLocaleDateString('de-CH')}</b></td>
                     <td data-label="Privatkonto"><div>${formatCHF(item.privatVal)}</div>${formatInlinePerf(item.perfPrivat)}</td>
                     <td data-label="Sparkonto"><div>${formatCHF(item.sparkontoVal)}</div>${formatInlinePerf(item.perfSparkonto)}</td>
                     <td data-label="Bargeld"><div>${formatCHF(item.bargeldVal)}</div>${formatInlinePerf(item.perfBargeld)}</td>
-                    <td data-label="Swissquote"><div>${formatCHF(item.sqVal)}</div>${formatInlinePerf(item.perfSq)}</td>
-                    <td data-label="Bitcoin"><div>${formatCHF(item.btcVal)}</div>${formatInlinePerf(item.perfBtc)}</td>
-                    <td data-label="Sparfond"><div>${formatCHF(item.fondVal)}</div>${formatInlinePerf(item.perfFond)}</td>
-                    <td data-label="Säule 3a"><div>${formatCHF(item.s3aVal)}</div>${formatInlinePerf(item.perfS3a)}</td>
+                    ${dynamicTdHtml}
                     <td data-label="Gesamt" style="font-weight: bold; font-size: 15px;">
                         <div style="color: var(--success);">${formatCHF(item.total)}</div>
                     </td>
-                    <td data-label="Performance" style="min-width: 120px;">
+                    <td data-label="Performance" style="min-width: 130px;">
                         ${formatFullPerf(item.perfTotal, item.perfTotalStart)}
                     </td>
                     <td data-label="Aktion"><button class="btn btn-danger" onclick="deletePortfolioRow(${item.originalIndex})" style="width: 100%; padding: 6px;">X</button></td>
@@ -1623,8 +1749,8 @@
             let liquid = currentBalances.privat + currentBalances.sparkonto + currentBalances.bargeld;
             let invest = 0;
             if (enrichedData.length > 0) {
-                const latest = enrichedData[0]; // Das ist jetzt der aktuellste Snapshot (da reverse())
-                invest = latest.sqVal + latest.btcVal + latest.fondVal + latest.s3aVal;
+                const latest = enrichedData[0]; 
+                invest = latest.assetsSum; // Nimmt automatisch alle existierenden Investments zusammen
             }
             let netWorth = liquid + invest;
             
@@ -1642,46 +1768,40 @@
             Chart.defaults.borderColor = isDark ? '#333333' : '#E0E6ED';
 
             let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
             const labels = chronologicalData.map(item => new Date(item.date).toLocaleDateString('de-CH'));
             
             const privatData = chronologicalData.map(item => item.privat !== undefined ? item.privat : 0);
             const sparkontoData = chronologicalData.map(item => item.sparkonto !== undefined ? item.sparkonto : 0);
             const bargeldData = chronologicalData.map(item => item.bargeld !== undefined ? item.bargeld : 0);
             
-            const sqData = chronologicalData.map(item => item.sq);
-            const btcData = chronologicalData.map(item => item.btc);
-            const fondData = chronologicalData.map(item => item.fond);
-            const s3aData = chronologicalData.map(item => item.s3a);
-            
+            // Dynamische Datasets vorbereiten
+            let dynamicDatasets = [];
+            investCats.forEach((cat, index) => {
+                let color = chartColors[index % chartColors.length];
+                let data = chronologicalData.map(item => (item.assets && item.assets[cat]) ? item.assets[cat] : 0);
+                dynamicDatasets.push({ label: cat, data: data, borderColor: color, backgroundColor: color, borderWidth: 2, tension: 0.3, order: 5 + index });
+            });
+
             const totalData = chronologicalData.map((item, idx) => {
-                const p = privatData[idx];
-                const sp = sparkontoData[idx];
-                const bar = bargeldData[idx];
-                return p + sp + bar + item.sq + item.btc + item.fond + item.s3a;
+                let sum = privatData[idx] + sparkontoData[idx] + bargeldData[idx];
+                if(item.assets) Object.values(item.assets).forEach(v => sum += v);
+                return sum;
             });
 
             const datasetTotal = { label: 'Gesamtvermögen', data: totalData, borderColor: '#27AE60', backgroundColor: 'rgba(39, 174, 96, 0.12)', borderWidth: 4, tension: 0.3, fill: true, order: 1 };
             const datasetPrivat = { label: 'Privatkonto', data: privatData, borderColor: '#34495E', backgroundColor: '#34495E', borderWidth: 2, tension: 0.3, order: 2 };
             const datasetSpar = { label: 'Sparkonto', data: sparkontoData, borderColor: '#16A085', backgroundColor: '#16A085', borderWidth: 2, tension: 0.3, order: 3 };
             const datasetBar = { label: 'Bargeld', data: bargeldData, borderColor: '#F39C12', backgroundColor: '#F39C12', borderWidth: 2, tension: 0.3, order: 4 };
-            const datasetSq = { label: 'Swissquote', data: sqData, borderColor: '#3498DB', backgroundColor: '#3498DB', borderWidth: 2, tension: 0.3, order: 5 };
-            const datasetBtc = { label: 'Bitcoin', data: btcData, borderColor: '#E67E22', backgroundColor: '#E67E22', borderWidth: 2, tension: 0.3, order: 6 };
-            const datasetFond = { label: 'Sparfond', data: fondData, borderColor: '#9B59B6', backgroundColor: '#9B59B6', borderWidth: 2, tension: 0.3, order: 7 };
-            const datasetS3a = { label: 'Säule 3a', data: s3aData, borderColor: '#7F8C8D', backgroundColor: '#7F8C8D', borderWidth: 2, tension: 0.3, order: 8 };
-
+            
             let chartDatasets = [];
-            if (filterVal === 'all') chartDatasets = [datasetTotal, datasetPrivat, datasetSpar, datasetBar, datasetSq, datasetBtc, datasetFond, datasetS3a];
+            if (filterVal === 'all') chartDatasets = [datasetTotal, datasetPrivat, datasetSpar, datasetBar, ...dynamicDatasets];
             else if (filterVal === 'total') chartDatasets = [datasetTotal];
             else if (filterVal === 'liquid') chartDatasets = [datasetPrivat, datasetSpar, datasetBar];
-            else if (filterVal === 'invest') chartDatasets = [datasetSq, datasetBtc, datasetFond, datasetS3a];
+            else if (filterVal === 'invest') chartDatasets = [...dynamicDatasets];
 
             let chartConfig = {
                 type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: chartDatasets
-                },
+                data: { labels: labels, datasets: chartDatasets },
                 options: {
                     responsive: true, maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
@@ -1689,9 +1809,7 @@
                         legend: { position: 'top' },
                         tooltip: { callbacks: { label: function(c) { let l=c.dataset.label||''; if(l)l+=': '; if(c.parsed.y!==null) l+=new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(c.parsed.y); return l; } } }
                     },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { callback: function(value) { return value + ' CHF'; } } }
-                    }
+                    scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value + ' CHF'; } } } }
                 }
             };
 
@@ -1704,6 +1822,7 @@
             loadBudgetData(); 
             renderTracker();
             calculateLiveBalances();
+            renderPortfolioInputs();
             renderPortfolio();
             updateS3aProgress();
         };
