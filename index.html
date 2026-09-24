@@ -1440,8 +1440,12 @@
             Object.keys(trackerData).forEach(mKey => {
                 if (mKey.startsWith(currentYear)) {
                     (trackerData[mKey] || []).forEach(e => {
-                        const is3aTransfer = (e.type === 'Transfer' && e.targetAccount === 'Säule 3a');
-                        const is3aDesc = (e.desc || '').toLowerCase().includes('3a') || (e.desc || '').toLowerCase().includes('säule');
+                        const targetSafe = e.targetAccount || '';
+                        const descSafe = (e.desc || '').toLowerCase();
+                        
+                        const is3aTransfer = (e.type === 'Transfer' && targetSafe === 'Säule 3a');
+                        const is3aDesc = descSafe.includes('3a') || descSafe.includes('säule');
+                        
                         if (is3aTransfer || (e.cat === 'Sparen' && is3aDesc)) {
                             currentPaid += (parseFloat(e.amount) || 0);
                         }
@@ -1455,7 +1459,7 @@
             const pctEl = document.getElementById('s3a-pct-display');
 
             if (fillEl) fillEl.style.width = pct + '%';
-            if (valEl) valEl.innerText = currentPaid.toFixed(2);
+            if (valEl) valEl.innerText = currentPaid.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             if (pctEl) pctEl.innerText = pct + '%';
         }
 
@@ -1527,61 +1531,112 @@
 
             const currentBalances = getCalculatedBalances();
             
-            // Aufsteigend sortieren für Performance-Berechnung
-            let sortedData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
+            // 1. Chronologisch sortieren für korrekte Performance-Rechnung (Alt nach Neu)
+            let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
             let enrichedData = [];
-            let firstTotal = null;
+            let firstItem = null;
 
-            sortedData.forEach((item, idx) => {
+            chronologicalData.forEach((item, idx) => {
                 const privatVal = item.privat !== undefined ? item.privat : 0;
                 const sparkontoVal = item.sparkonto !== undefined ? item.sparkonto : 0;
                 const bargeldVal = item.bargeld !== undefined ? item.bargeld : 0;
-                const total = privatVal + sparkontoVal + bargeldVal + item.sq + item.btc + item.fond + item.s3a;
+                const sqVal = item.sq || 0;
+                const btcVal = item.btc || 0;
+                const fondVal = item.fond || 0;
+                const s3aVal = item.s3a || 0;
 
-                if (idx === 0) firstTotal = total;
+                const total = privatVal + sparkontoVal + bargeldVal + sqVal + btcVal + fondVal + s3aVal;
 
-                let prevTotal = idx > 0 ? enrichedData[idx-1].total : total;
+                if (idx === 0) firstItem = { total, privat: privatVal, sparkonto: sparkontoVal, bargeld: bargeldVal, sq: sqVal, btc: btcVal, fond: fondVal, s3a: s3aVal };
 
-                let diffPrev = total - prevTotal;
-                let pctPrev = prevTotal !== 0 ? (diffPrev / prevTotal) * 100 : 0;
+                let prevItem = idx > 0 ? enrichedData[idx-1] : firstItem;
 
-                let diffStart = total - firstTotal;
-                let pctStart = firstTotal !== 0 ? (diffStart / firstTotal) * 100 : 0;
+                const calcDiff = (curr, prev, first) => {
+                    return {
+                        diffPrev: curr - prev,
+                        pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0,
+                        diffStart: curr - first,
+                        pctStart: first !== 0 ? ((curr - first) / first) * 100 : 0
+                    };
+                };
 
-                enrichedData.push({ ...item, total, diffPrev, pctPrev, diffStart, pctStart, originalIndex: portfolioData.findIndex(p => p.date === item.date) });
+                enrichedData.push({
+                    ...item, total, privatVal, sparkontoVal, bargeldVal, sqVal, btcVal, fondVal, s3aVal,
+                    perfTotal: calcDiff(total, prevItem.total, firstItem.total),
+                    perfPrivat: calcDiff(privatVal, prevItem.privat, firstItem.privat),
+                    perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto, firstItem.sparkonto),
+                    perfBargeld: calcDiff(bargeldVal, prevItem.bargeld, firstItem.bargeld),
+                    perfSq: calcDiff(sqVal, prevItem.sq, firstItem.sq),
+                    perfBtc: calcDiff(btcVal, prevItem.btc, firstItem.btc),
+                    perfFond: calcDiff(fondVal, prevItem.fond, firstItem.fond),
+                    perfS3a: calcDiff(s3aVal, prevItem.s3a, firstItem.s3a),
+                    originalIndex: portfolioData.findIndex(p => p.date === item.date)
+                });
             });
 
-            // Für die Tabelle wieder umdrehen (neueste oben)
+            // 2. Umdrehen für die Anzeige in der Tabelle (Neu nach Alt)
             enrichedData.reverse();
 
             const tbody = document.getElementById("portfolio-body");
             tbody.innerHTML = "";
             
             enrichedData.forEach((item) => {
+                const formatPerfDetail = (name, perfObj) => {
+                    if(perfObj.diffPrev === 0 && perfObj.diffStart === 0) return '';
+                    let cP = perfObj.diffPrev >= 0 ? 'var(--success)' : '#E74C3C';
+                    let sP = perfObj.diffPrev > 0 ? '+' : '';
+                    let cS = perfObj.diffStart >= 0 ? 'var(--success)' : '#E74C3C';
+                    let sS = perfObj.diffStart > 0 ? '+' : '';
+                    return `<div style="display: flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid var(--border); padding-bottom: 3px;">
+                        <strong>${name}:</strong> 
+                        <span style="text-align: right;">
+                            <span style="color: ${cP}; display: block;">Letzter: ${sP}${formatCHF(perfObj.diffPrev)} (${sP}${perfObj.pctPrev.toFixed(1)}%)</span>
+                            <span style="color: ${cS}; font-size: 10px;">Start: ${sS}${formatCHF(perfObj.diffStart)} (${sS}${perfObj.pctStart.toFixed(1)}%)</span>
+                        </span>
+                    </div>`;
+                };
+
                 let perfHtml = `<div style="font-size: 11.5px; line-height: 1.4;">`;
-                if(item.diffPrev === 0 && item.diffStart === 0) {
+                if(item.perfTotal.diffPrev === 0 && item.perfTotal.diffStart === 0) {
                     perfHtml += `<span style="color: var(--text-muted)">- Startpunkt -</span>`;
                 } else {
-                    let colorPrev = item.diffPrev >= 0 ? 'var(--success)' : '#E74C3C';
-                    let signPrev = item.diffPrev > 0 ? '+' : '';
-                    perfHtml += `<div style="color: ${colorPrev}">Letzter: ${signPrev}${formatCHF(item.diffPrev)} (${signPrev}${item.pctPrev.toFixed(1)}%)</div>`;
+                    let colorPrev = item.perfTotal.diffPrev >= 0 ? 'var(--success)' : '#E74C3C';
+                    let signPrev = item.perfTotal.diffPrev > 0 ? '+' : '';
+                    perfHtml += `<div style="color: ${colorPrev}; font-weight: bold; font-size: 12.5px;">Letzter: ${signPrev}${formatCHF(item.perfTotal.diffPrev)} (${signPrev}${item.perfTotal.pctPrev.toFixed(1)}%)</div>`;
                     
-                    let colorStart = item.diffStart >= 0 ? 'var(--success)' : '#E74C3C';
-                    let signStart = item.diffStart > 0 ? '+' : '';
-                    perfHtml += `<div style="color: ${colorStart}">Start: ${signStart}${formatCHF(item.diffStart)} (${signStart}${item.pctStart.toFixed(1)}%)</div>`;
+                    let colorStart = item.perfTotal.diffStart >= 0 ? 'var(--success)' : '#E74C3C';
+                    let signStart = item.perfTotal.diffStart > 0 ? '+' : '';
+                    perfHtml += `<div style="color: ${colorStart}">Start: ${signStart}${formatCHF(item.perfTotal.diffStart)} (${signStart}${item.perfTotal.pctStart.toFixed(1)}%)</div>`;
+                }
+                
+                let detailsHtml = formatPerfDetail('Privatkonto', item.perfPrivat) +
+                                  formatPerfDetail('Sparkonto', item.perfSparkonto) +
+                                  formatPerfDetail('Bargeld', item.perfBargeld) +
+                                  formatPerfDetail('Swissquote', item.perfSq) +
+                                  formatPerfDetail('Bitcoin', item.perfBtc) +
+                                  formatPerfDetail('Sparfond', item.perfFond) +
+                                  formatPerfDetail('Säule 3a', item.perfS3a);
+
+                if (detailsHtml !== '') {
+                    perfHtml += `<details style="margin-top: 8px; cursor: pointer;">
+                        <summary style="color: var(--accent); font-weight: 600; outline: none; margin-bottom: 5px;">Einzel-Details ▼</summary>
+                        <div style="padding: 8px; background: var(--bg); border-radius: 6px; font-size: 11px;">
+                            ${detailsHtml}
+                        </div>
+                    </details>`;
                 }
                 perfHtml += `</div>`;
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td data-label="Datum"><b>${new Date(item.date).toLocaleDateString('de-CH')}</b></td>
-                    <td data-label="Privatkonto">${formatCHF(item.privat)}</td>
-                    <td data-label="Sparkonto">${formatCHF(item.sparkonto)}</td>
-                    <td data-label="Bargeld">${formatCHF(item.bargeld)}</td>
-                    <td data-label="Swissquote">${formatCHF(item.sq)}</td>
-                    <td data-label="Bitcoin">${formatCHF(item.btc)}</td>
-                    <td data-label="Sparfond">${formatCHF(item.fond)}</td>
-                    <td data-label="Säule 3a">${formatCHF(item.s3a)}</td>
+                    <td data-label="Privatkonto">${formatCHF(item.privatVal)}</td>
+                    <td data-label="Sparkonto">${formatCHF(item.sparkontoVal)}</td>
+                    <td data-label="Bargeld">${formatCHF(item.bargeldVal)}</td>
+                    <td data-label="Swissquote">${formatCHF(item.sqVal)}</td>
+                    <td data-label="Bitcoin">${formatCHF(item.btcVal)}</td>
+                    <td data-label="Sparfond">${formatCHF(item.fondVal)}</td>
+                    <td data-label="Säule 3a">${formatCHF(item.s3aVal)}</td>
                     <td data-label="Gesamt" style="color: var(--success); font-weight: bold; font-size: 16px;">${formatCHF(item.total)}</td>
                     <td data-label="Performance">${perfHtml}</td>
                     <td data-label="Aktion"><button class="btn btn-danger" onclick="deletePortfolioRow(${item.originalIndex})" style="width: 100%; padding: 6px;">X</button></td>
@@ -1589,11 +1644,12 @@
                 tbody.appendChild(tr);
             });
             
+            // Fix für Bug 1: Übersicht oben updaten
             if (enrichedData.length > 0) {
                 const latest = enrichedData[0];
-                const liquid = currentBalances.privat + currentBalances.sparkonto + currentBalances.bargeld;
-                const invest = latest.sq + latest.btc + latest.fond + latest.s3a;
-                const netWorth = liquid + invest;
+                const liquid = latest.privatVal + latest.sparkontoVal + latest.bargeldVal;
+                const invest = latest.sqVal + latest.btcVal + latest.fondVal + latest.s3aVal;
+                const netWorth = latest.total;
                 
                 document.getElementById('port-total').innerText = formatCHF(netWorth);
                 document.getElementById('port-liquid').innerText = formatCHF(liquid);
