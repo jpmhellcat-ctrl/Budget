@@ -355,7 +355,9 @@
             <div class="actions-bar">
                 <div style="display: flex; gap: 10px; flex: 1; align-items: center; flex-wrap: wrap; width: 100%;">
                     <button class="btn" onclick="addTrackerRow()">+ Eintrag erfassen</button>
-                    <button class="btn btn-warning" onclick="autoFillFixkosten()">⚡ Auto-Fill: Fixkosten & Lohn</button>
+                    <select id="tracker-quick-add" class="btn btn-warning" onchange="quickAddFixkosten(this.value)" style="margin: 0; max-width: 250px; padding: 12px; font-weight: bold; cursor: pointer; text-align: center; border: none; color: white;">
+                        <option value="">⚡ Heute verbuchen...</option>
+                    </select>
                     <button class="btn btn-filter" id="btn-filter-geschaeft" onclick="toggleSpesenFilter()" style="display: none;">💼 Nur Geschäftsauslagen</button>
                     
                     <select id="tracker-cat-filter" onchange="renderTracker()" style="max-width: 200px; margin: 0;">
@@ -383,13 +385,13 @@
             </div>
 
             <div class="table-container">
-                <table id="tracker-table">
+                <table id="budget-table">
                     <thead>
                         <tr>
-                            <th class="sortable" onclick="sortTracker('date')" style="width: 140px;">Datum <span id="sort-icon-t-date">▲</span></th>
-                            <th class="sortable" onclick="sortTracker('type')" style="width: 180px;">Konto & Typ <span id="sort-icon-t-type">⬍</span></th>
-                            <th class="sortable" onclick="sortTracker('desc')">Beschreibung <span id="sort-icon-t-desc">⬍</span></th>
-                            <th class="sortable" onclick="sortTracker('cat')" style="width: 160px;">Kategorie <span id="sort-icon-t-cat">⬍</span></th>
+                            <th class="sortable" onclick="sortBudget('kategorie')">Kategorie <span id="sort-icon-b-kategorie">⬍</span></th>
+                            <th class="sortable" onclick="sortBudget('typ')">Typ <span id="sort-icon-b-typ">⬍</span></th>
+                            <th class="sortable" onclick="sortBudget('betrag')" style="min-width: 110px;">Pro Monat <span id="sort-icon-b-betrag">⬍</span></th>
+                            <th style="min-width: 110px;">Halbes Jahr</th>
                             <th class="sortable" onclick="sortTracker('amount')" style="width: 150px;">Betrag (CHF) <span id="sort-icon-t-amount">⬍</span></th>
                             <th style="width: 80px;">Aktion</th>
                         </tr>
@@ -642,12 +644,12 @@
         }
 
         const defaultData = [
-            {tag: 25, kategorie: "Gehalt / Lohn", typ: "Einnahmen", betrag: 0.00, details: ""},
-            {tag: 1, kategorie: "Miete", typ: "Fixkosten", betrag: 0.00, details: ""},
-            {tag: 1, kategorie: "Krankenkasse", typ: "Fixkosten", betrag: 0.00, details: ""},
-            {tag: 2, kategorie: "Sparen", typ: "Sparen & Investieren", betrag: 0.00, details: ""},
-            {tag: 1, kategorie: "Wocheneinkauf", typ: "Alltag", betrag: 0.00, details: ""},
-            {tag: 1, kategorie: "Tanken / ÖV", typ: "Transport", betrag: 0.00, details: ""}
+            {kategorie: "Gehalt / Lohn", typ: "Einnahmen", betrag: 0.00, details: ""},
+            {kategorie: "Miete", typ: "Fixkosten", betrag: 0.00, details: ""},
+            {kategorie: "Krankenkasse", typ: "Fixkosten", betrag: 0.00, details: ""},
+            {kategorie: "Sparen", typ: "Sparen & Investieren", betrag: 0.00, details: ""},
+            {kategorie: "Wocheneinkauf", typ: "Alltag", betrag: 0.00, details: ""},
+            {kategorie: "Tanken / ÖV", typ: "Transport", betrag: 0.00, details: ""}
         ];
         let initialData = [];
         let sackgeldDetailsStr = "";
@@ -685,7 +687,7 @@
         }
 
         function renderBudgetTable() {
-            ['tag', 'kategorie', 'typ', 'betrag', 'details'].forEach(f => {
+            ['kategorie', 'typ', 'betrag', 'details'].forEach(f => {
                 const el = document.getElementById('sort-icon-b-' + f);
                 if (el) el.innerText = (budgetSortField === f) ? (budgetSortAsc ? '▲' : '▼') : '⬍';
             });
@@ -710,7 +712,6 @@
             indexed.forEach(({ item, originalIndex }) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td data-label="Tag"><input type="number" min="1" max="31" value="${item.tag || 1}" onchange="updateDay(${originalIndex}, this.value)"></td>
                     <td data-label="Kategorie"><input type="text" value="${item.kategorie}" onchange="updateTextData(${originalIndex}, 'kategorie', this.value)"></td>
                     <td data-label="Typ"><select onchange="updateTextData(${originalIndex}, 'typ', this.value)">${types.map(t => `<option value="${t}" ${t === item.typ ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
                     <td data-label="Pro Monat"><input type="number" step="0.01" value="${item.betrag.toFixed(2)}" onchange="updateAmount(${originalIndex}, 'month', this.value)"></td>
@@ -722,16 +723,29 @@
                 tbody.appendChild(tr);
             });
             calculateBudgetTotals();
+            updateQuickAddDropdown();
+        }
+
+        function updateQuickAddDropdown() {
+            const dropdown = document.getElementById('tracker-quick-add');
+            if (!dropdown) return;
+            
+            let options = '<option value="">⚡ Heute verbuchen...</option>';
+            initialData.forEach((item, index) => {
+                if (item.betrag > 0 && (item.typ === "Einnahmen" || item.typ === "Fixkosten" || item.typ === "Sparen & Investieren")) {
+                    options += `<option value="${index}">${item.kategorie} (${item.betrag.toFixed(2)} CHF)</option>`;
+                }
+            });
+            dropdown.innerHTML = options;
         }
 
         function moveUp(i) { if(i>0) { const t=initialData[i-1]; initialData[i-1]=initialData[i]; initialData[i]=t; budgetSortField=null; saveBudgetData(); renderBudgetTable(); } }
         function moveDown(i) { if(i<initialData.length-1) { const t=initialData[i+1]; initialData[i+1]=initialData[i]; initialData[i]=t; budgetSortField=null; saveBudgetData(); renderBudgetTable(); } }
         function updateTextData(i, f, v) { initialData[i][f] = v; saveBudgetData(); calculateBudgetTotals(); }
         function updateAmount(i, p, v) { let n = parseFloat(v) || 0; initialData[i].betrag = p === 'year' ? n/12 : p === 'half' ? n/6 : n; saveBudgetData(); renderBudgetTable(); }
-        function updateDay(i, v) { initialData[i].tag = parseInt(v) || 1; saveBudgetData(); }
         function updateSackgeldDetails(v) { sackgeldDetailsStr = v; saveBudgetData(); }
         function deleteRow(i) { initialData.splice(i, 1); saveBudgetData(); renderBudgetTable(); }
-        function addRow() { initialData.push({tag: 1, kategorie: "Neu", typ: "Fixkosten", betrag: 0.00, details: ""}); saveBudgetData(); renderBudgetTable(); }
+        function addRow() { initialData.push({kategorie: "Neu", typ: "Fixkosten", betrag: 0.00, details: ""}); saveBudgetData(); renderBudgetTable(); }
 
         function calculateBudgetTotals() {
             let inc = 0, exp = 0, inv = 0, fix = 0, varb = 0;
@@ -797,77 +811,54 @@
             saveTrackerData(); renderTracker();
         }
         
-        function autoFillFixkosten() {
+        function quickAddFixkosten(indexStr) {
+            if (indexStr === "") return;
+            const index = parseInt(indexStr);
+            const item = initialData[index];
+            if (!item) return;
+
             if (!trackerData[currentMonthKey]) trackerData[currentMonthKey] = [];
-            const currentEntries = trackerData[currentMonthKey];
             
-            let addedCount = 0;
-            let skippedCount = 0;
+            let type = "";
+            let target = "";
+            let cat = "Sonstiges";
             
-            // Finde heraus, wie viele Tage der aktuelle Monat hat (zur Sicherheit)
-            const [yearStr, monthStr] = currentMonthKey.split('-');
-            const maxDays = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
-
-            initialData.forEach(item => {
-                if (item.betrag <= 0) return;
+            if (item.typ === "Einnahmen") {
+                type = "Einnahme";
+                cat = "Lohn";
+            } else if (item.typ === "Fixkosten") {
+                type = "Ausgabe";
+                cat = "Fixkosten";
+            } else if (item.typ === "Sparen & Investieren") {
+                type = "Transfer";
+                cat = "Sparen";
                 
-                let type = "";
-                let target = "";
-                let cat = "Sonstiges";
-                
-                if (item.typ === "Einnahmen") {
-                    type = "Einnahme";
-                    cat = "Lohn";
-                } else if (item.typ === "Fixkosten") {
-                    type = "Ausgabe";
-                    cat = "Fixkosten";
-                } else if (item.typ === "Sparen & Investieren") {
-                    type = "Transfer";
-                    cat = "Sparen";
-                    
-                    let nameLower = item.kategorie.toLowerCase();
-                    if(nameLower.includes("swissquote") || nameLower.includes("depot")) target = "Swissquote";
-                    else if(nameLower.includes("3a") || nameLower.includes("säule")) target = "Säule 3a";
-                    else if(nameLower.includes("bitcoin") || nameLower.includes("krypto")) target = "Bitcoin";
-                    else if(nameLower.includes("sparfond") || nameLower.includes("fond")) target = "Sparfond";
-                    else target = "Sparkonto";
-                } else {
-                    return;
-                }
+                let nameLower = item.kategorie.toLowerCase();
+                if(nameLower.includes("swissquote") || nameLower.includes("depot")) target = "Swissquote";
+                else if(nameLower.includes("3a") || nameLower.includes("säule")) target = "Säule 3a";
+                else if(nameLower.includes("bitcoin") || nameLower.includes("krypto")) target = "Bitcoin";
+                else if(nameLower.includes("sparfond") || nameLower.includes("fond")) target = "Sparfond";
+                else target = "Sparkonto";
+            }
 
-                // Generiere exaktes Datum aus dem 'Tag'-Feld
-                let safeDay = Math.min(item.tag || 1, maxDays);
-                let dayStr = String(safeDay).padStart(2, '0');
-                let entryDate = `${currentMonthKey}-${dayStr}`;
+            const todayStr = getTodayString();
+            const entryDate = currentMonthKey === todayStr.substring(0, 7) ? todayStr : `${currentMonthKey}-01`;
 
-                const exists = currentEntries.some(e => 
-                    e.desc.trim().toLowerCase() === item.kategorie.trim().toLowerCase() && 
-                    e.type === type
-                );
-
-                if (exists) {
-                    skippedCount++;
-                } else {
-                    trackerData[currentMonthKey].push({
-                        date: entryDate,
-                        sourceAccount: "Privatkonto",
-                        type: type,
-                        targetAccount: target,
-                        desc: item.kategorie,
-                        cat: cat,
-                        amount: item.betrag
-                    });
-                    addedCount++;
-                }
+            trackerData[currentMonthKey].push({
+                date: entryDate,
+                sourceAccount: "Privatkonto",
+                type: type,
+                targetAccount: target,
+                desc: item.kategorie,
+                cat: cat,
+                amount: item.betrag
             });
 
-            if (addedCount > 0) {
-                saveTrackerData();
-                renderTracker();
-                alert(`✅ ${addedCount} Einträge hinzugefügt (${skippedCount} bereits vorhandene übersprungen).`);
-            } else {
-                alert(`ℹ️ Alle Fixkosten und Lohn für ${getMonthName(currentMonthKey)} sind bereits lückenlos im Tracker vorhanden!`);
-            }
+            saveTrackerData();
+            renderTracker();
+            
+            // Dropdown zurücksetzen
+            document.getElementById('tracker-quick-add').value = "";
         }
 
         function updateTrackerData(index, field, value) {
@@ -1035,20 +1026,19 @@
                 const cat = item.cat || "Alltag";
                 const type = item.type || "Ausgabe";
 
-                // Summen für die dynamischen Boxen bilden
                 if (catSums[cat] !== undefined) {
                     if (type === "Ausgabe" || type === "Transfer") catSums[cat] += amt;
                     else if (type === "Einnahme") {
                         if (cat === "Geschäftsauslagen") catSums[cat] -= amt;
-                        else catSums[cat] += amt; // Lohn & Co addieren wir positiv in der Übersicht
+                        else catSums[cat] += amt; 
                     }
                 }
 
-                if (cat === "Geschäftsauslagen") return; // Reiner Durchlaufposten
+                if (cat === "Geschäftsauslagen") return; 
 
                 if (type === "Ausgabe" || type === "Transfer") {
                     if (cat === "Fixkosten" || cat === "Sparen") {
-                        actualFixkosten += amt;
+                        actualFixkosten += amt; // Zählt voll gegen das Budget
                     } else {
                         actualSpent += amt;
                     }
@@ -1061,7 +1051,7 @@
                 }
             });
 
-            // Start-Budget rein aus Tracker berechnen!
+            // Start-Budget ist jetzt live (Lohn - Fixkosten)
             let startBudget = actualLohn - actualFixkosten;
             let rest = startBudget - actualSpent + extraIncome;
 
@@ -1097,13 +1087,15 @@
                 restCard.style.borderBottomColor = 'var(--success)'; 
             }
             
-            // Dynamisch gerenderte Kategorie-Boxen erstellen
             const catGrid = document.getElementById('category-summary-grid');
             if (catGrid) {
-                catGrid.innerHTML = trackerCategories.map(cat => {
-                    if (cat === "Geschäftsauslagen") return ''; // Blenden wir im Grid aus, da verwirrend
-                    
+                let htmlStr = '';
+                trackerCategories.forEach(cat => {
+                    if (cat === "Geschäftsauslagen") return; 
                     let val = catSums[cat] || 0;
+                    
+                    if (val === 0) return; // BLENDET KATEGORIE AUS WENN WERT 0 IST
+                    
                     let color = "var(--accent)";
                     if(cat === "Lohn" || cat === "Einnahmen") color = "var(--success)";
                     if(cat === "Fixkosten" || cat === "Sparen") color = "#34495E";
@@ -1112,14 +1104,17 @@
                     if(cat === "Einmalig") color = "#E67E22";
                     if(cat === "Bargeld") color = "#16A085";
                     
-                    return `<div class="cat-item" style="border-left-color: ${color}"><div class="cat-name">${cat}</div><div class="cat-sum">${formatCHF(val)}</div></div>`;
-                }).join('');
+                    htmlStr += `<div class="cat-item" style="border-left-color: ${color}"><div class="cat-name">${cat}</div><div class="cat-sum">${formatCHF(val)}</div></div>`;
+                });
+                
+                if (htmlStr === '') htmlStr = '<div style="color: var(--text-muted); font-size: 14px;">Keine Kategorieausgaben vorhanden.</div>';
+                catGrid.innerHTML = htmlStr;
             }
         }
 
         function exportCSV() {
-            let csv = "Tag,Kategorie,Typ,Pro Monat (CHF),Pro Halbjahr (CHF),Pro Jahr (CHF),Details\n";
-            initialData.forEach(item => csv += `${item.tag || 1},"${item.kategorie}","${item.typ}",${item.betrag.toFixed(2)},${(item.betrag * 6).toFixed(2)},${(item.betrag * 12).toFixed(2)},"${item.details}"\n`);
+            let csv = "Kategorie,Typ,Pro Monat (CHF),Pro Halbjahr (CHF),Pro Jahr (CHF),Details\n";
+            initialData.forEach(item => csv += `"${item.kategorie}","${item.typ}",${item.betrag.toFixed(2)},${(item.betrag * 6).toFixed(2)},${(item.betrag * 12).toFixed(2)},"${item.details}"\n`);
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'Budget_Planer.csv'; a.click();
@@ -1150,14 +1145,16 @@
                 let newData = [];
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 6) { // Mit Tag als Spalte 0
+                    if (cols.length >= 6) { 
+                        // Fallback altes Format (Spalte 0 war Tag)
                         const kat = cols[1].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)") || kat.includes("Sackgeld (Automatisch)")) continue;
-                        newData.push({tag: parseInt(cols[0]) || 1, kategorie: kat, typ: cols[2].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[3]) || 0, details: cols[6] ? cols[6].replace(/^"|"$/g, '').trim() : ""});
-                    } else if (cols.length === 5) { // Fallback altes Format
+                        newData.push({kategorie: kat, typ: cols[2].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[3]) || 0, details: cols[6] ? cols[6].replace(/^"|"$/g, '').trim() : ""});
+                    } else if (cols.length === 5) { 
+                        // Neues Format
                         const kat = cols[0].replace(/^"|"$/g, '').trim();
                         if (kat.includes("Sackgeld (Rest)")) continue;
-                        newData.push({tag: 1, kategorie: kat, typ: cols[1].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[2]) || 0, details: cols[5] ? cols[5].replace(/^"|"$/g, '').trim() : ""});
+                        newData.push({kategorie: kat, typ: cols[1].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[2]) || 0, details: cols[4] ? cols[4].replace(/^"|"$/g, '').trim() : ""});
                     }
                 }
                 if (newData.length > 0) { initialData = newData; saveBudgetData(); renderBudgetTable(); alert("✅ Budget importiert!"); }
