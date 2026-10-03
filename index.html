@@ -468,6 +468,73 @@
             </div>
         </div>
         
+        <!-- STATS TAB -->
+        <div id="tab-stats" class="tab-content">
+            <!-- NEW YEARLY DASHBOARD -->
+            <div class="summary-cards" style="margin-bottom: 25px;">
+                <div class="card income">
+                    <h3>Gesamteinnahmen (Jahr)</h3>
+                    <div class="value" id="stat-total-income" style="color: var(--success);">0.00 CHF</div>
+                    <div class="sub-value">Alle verbuchten Löhne & Gutschriften</div>
+                </div>
+                <div class="card warning">
+                    <h3>Gesamtausgaben (Jahr)</h3>
+                    <div class="value" id="stat-total-expense" style="color: #E74C3C;">0.00 CHF</div>
+                    <div class="sub-value">Echte Ausgaben & Spesen</div>
+                </div>
+                <div class="card" id="stat-profit-card">
+                    <h3>Netto-Ergebnis</h3>
+                    <div class="value" id="stat-total-profit">0.00 CHF</div>
+                    <div class="sub-value">Ersparnisse nach allen Kosten</div>
+                </div>
+            </div>
+
+            <div class="tracker-extras" style="margin-bottom: 30px;">
+                <div class="extra-box">
+                    <h4>📉 Top 5 grösste Ausgaben</h4>
+                    <ul id="stat-top-expenses" class="cat-list"></ul>
+                </div>
+                <div class="extra-box">
+                    <h4>📈 Top 5 grösste Einnahmen</h4>
+                    <ul id="stat-top-incomes" class="cat-list"></ul>
+                </div>
+            </div>
+            <!-- END NEW DASHBOARD -->
+
+            <!-- NEU: Jahresweite Suche & Kategorien-Editor -->
+            <div class="extra-box" style="margin-bottom: 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px; gap: 10px;">
+                    <h4 style="margin: 0;">🔍 Jahresweite Suche & Massen-Editor</h4>
+                    <input type="text" id="yearly-search-input" placeholder="Nach Text oder Kategorie suchen..." oninput="searchYearlyTransactions()" style="max-width: 300px; margin: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text);">
+                </div>
+                <div class="table-container" id="yearly-search-results-container" style="display: none; max-height: 400px; overflow-y: auto; margin-bottom: 0;">
+                    <table id="yearly-search-table">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Zyklus</th>
+                                <th>Beschreibung</th>
+                                <th>Betrag (CHF)</th>
+                                <th>Kategorie anpassen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="yearly-search-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="actions-bar">
+                <select id="chart-type-selector" onchange="updateChart()" style="max-width: 300px;">
+                    <option value="grouped">Kategorien im Vergleich (Gruppiert)</option>
+                    <option value="total">Gesamtausgaben pro Monat (Gestapelt)</option>
+                    <option value="income-expense">Netto-Gewinn & Einnahmen vs Ausgaben</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="myChart"></canvas>
+            </div>
+        </div>
+
         <!-- PORTFOLIO TAB -->
         <div id="tab-portfolio" class="tab-content">
             <div class="summary-cards">
@@ -578,21 +645,6 @@
             </div>
 
         </div>
-
-        <!-- STATS TAB -->
-        <div id="tab-stats" class="tab-content">
-            <div class="actions-bar">
-                <select id="chart-type-selector" onchange="updateChart()" style="max-width: 300px;">
-                    <option value="grouped">Kategorien im Vergleich (Gruppiert)</option>
-                    <option value="total">Gesamtausgaben pro Monat (Gestapelt)</option>
-                    <option value="income-expense">Netto-Gewinn & Einnahmen vs Ausgaben</option>
-                </select>
-            </div>
-            <div class="chart-container">
-                <canvas id="myChart"></canvas>
-            </div>
-        </div>
-
     </div>
 
     <script>
@@ -602,6 +654,25 @@
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
+        }
+
+        // --- NEUE LOGIK: 25. bis 24. Lohnzyklus ---
+        function getCycleMonth(dateString) {
+            if (!dateString) return "";
+            const d = new Date(dateString);
+            let year = d.getFullYear();
+            let month = d.getMonth() + 1;
+            let day = d.getDate();
+            
+            // Wenn Tag >= 25, gehört es zum FOLGEMONAT.
+            if (day >= 25) {
+                month++;
+                if (month > 12) {
+                    month = 1;
+                    year++;
+                }
+            }
+            return `${year}-${String(month).padStart(2, '0')}`;
         }
 
         let trackerSortField = 'date';
@@ -902,8 +973,9 @@
 
         let rawTrackerData = localStorage.getItem('tracker_data_v4');
         let trackerData = rawTrackerData ? JSON.parse(rawTrackerData) : {};
-        let currentDateTracker = new Date();
-        let currentMonthKey = `${currentDateTracker.getFullYear()}-${String(currentDateTracker.getMonth() + 1).padStart(2, '0')}`;
+        
+        // Initialer Monat basierend auf dem heutigen Datum und der 25. Regel
+        let currentMonthKey = getCycleMonth(getTodayString());
         
         function getMonthName(dateString) {
             if(!dateString) return "";
@@ -932,9 +1004,11 @@
             }
         }
         function addTrackerRow() {
+            let today = getTodayString();
+            let todayCycle = getCycleMonth(today);
+            let defaultDate = todayCycle === currentMonthKey ? today : `${currentMonthKey.split('-')[0]}-${currentMonthKey.split('-')[1]}-01`; 
+
             if (!trackerData[currentMonthKey]) trackerData[currentMonthKey] = [];
-            const todayStr = getTodayString();
-            const defaultDate = currentMonthKey === todayStr.substring(0, 7) ? todayStr : `${currentMonthKey}-01`;
             trackerData[currentMonthKey].push({ date: defaultDate, sourceAccount: "Privatkonto", type: "Ausgabe", desc: "", cat: "Alltag", amount: 0.00, targetAccount: "" });
             saveTrackerData(); renderTracker();
         }
@@ -943,7 +1017,10 @@
             if (indexStr === "") return;
             const index = parseInt(indexStr); const item = initialData[index];
             if (!item) return;
-            if (!trackerData[currentMonthKey]) trackerData[currentMonthKey] = [];
+            
+            let today = getTodayString();
+            let cycle = getCycleMonth(today);
+            if (!trackerData[cycle]) trackerData[cycle] = [];
             
             let type = ""; let target = ""; let cat = "Sonstiges";
             
@@ -963,20 +1040,41 @@
                 }
             }
 
-            trackerData[currentMonthKey].push({
-                date: getTodayString(), sourceAccount: "Privatkonto", type: type,
+            trackerData[cycle].push({
+                date: today, sourceAccount: "Privatkonto", type: type,
                 targetAccount: target, desc: item.kategorie, cat: cat, amount: item.betrag
             });
 
+            currentMonthKey = cycle; // Springe zum richtigen Monat
             saveTrackerData(); renderTracker();
             document.getElementById('tracker-quick-add').value = "";
         }
 
         function updateTrackerData(index, field, value) {
             if (field === 'amount') value = parseFloat(value) || 0;
-            trackerData[currentMonthKey][index][field] = value;
+            
+            if (field === 'date') {
+                let oldCycle = currentMonthKey;
+                let newCycle = getCycleMonth(value);
+                trackerData[oldCycle][index].date = value;
+                
+                if (oldCycle !== newCycle) {
+                    let itemToMove = trackerData[oldCycle].splice(index, 1)[0];
+                    if (!trackerData[newCycle]) trackerData[newCycle] = [];
+                    trackerData[newCycle].push(itemToMove);
+                    saveTrackerData();
+                    currentMonthKey = newCycle; 
+                    renderTracker();
+                    alert(`Datum geändert: Die Buchung ist in den Zyklus ${getMonthName(newCycle)} gesprungen (Lohn-Regel: 25. bis 24.).`);
+                    return;
+                }
+            } else {
+                trackerData[currentMonthKey][index][field] = value;
+            }
+            
             saveTrackerData(); renderTracker();
         }
+
         function deleteTrackerRow(index) {
             trackerData[currentMonthKey].splice(index, 1);
             saveTrackerData(); renderTracker();
@@ -1358,7 +1456,7 @@
                     if (data.last_export_date_v4) localStorage.setItem('last_export_date_v4', data.last_export_date_v4);
                     
                     alert("✅ Backup geladen!"); location.reload();
-                } catch (err) { alert("❌ Fehler beim Lesen der Datei."); }
+                } catch (err) { alert("❌ Fehler beim Lesen der Datei. Sie ist beschädigt oder unvollständig."); }
             };
             reader.readAsText(file); event.target.value = ''; 
         }
@@ -1435,7 +1533,160 @@
             reader.readAsText(file); event.target.value = ''; 
         }
 
+        function searchYearlyTransactions() {
+            const searchInput = document.getElementById('yearly-search-input');
+            const container = document.getElementById('yearly-search-results-container');
+            const tbody = document.getElementById('yearly-search-body');
+            const term = searchInput.value.trim().toLowerCase();
+
+            if (term === '') {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            tbody.innerHTML = '';
+
+            let results = [];
+
+            // Gesamtes Jahr nach dem Suchbegriff durchkämmen
+            for (let month in trackerData) {
+                (trackerData[month] || []).forEach((tx, index) => {
+                    const descMatches = (tx.desc || '').toLowerCase().includes(term);
+                    const catMatches = (tx.cat || '').toLowerCase().includes(term);
+                    if (descMatches || catMatches) {
+                        results.push({ month, index, tx });
+                    }
+                });
+            }
+
+            // Nach Datum absteigend sortieren (Neueste zuerst)
+            results.sort((a, b) => new Date(b.tx.date) - new Date(a.tx.date));
+
+            if (results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Keine Einträge gefunden.</td></tr>';
+                return;
+            }
+
+            results.forEach(res => {
+                const item = res.tx;
+                let dateStr = new Date(item.date).toLocaleDateString('de-CH');
+                let colorClass = item.type === 'Einnahme' ? 'text-success' : (item.type === 'Transfer' ? 'amount-transfer' : 'text-danger');
+                let sign = item.type === 'Einnahme' ? '+' : (item.type === 'Transfer' ? '⇄' : '-');
+
+                // Dynamisches Kategorie-Dropdown für diesen Eintrag
+                let selectHtml = `<select onchange="updateYearlyCategory('${res.month}', ${res.index}, this.value, event)" style="padding: 6px; font-size: 13px; margin: 0; width: 100%; font-weight: bold; background-color: var(--card-bg); color: var(--text); border: 1px solid var(--border); transition: background-color 0.3s;">`;
+                trackerCategories.forEach(c => {
+                    selectHtml += `<option value="${c}" ${c === item.cat ? 'selected' : ''}>${c}</option>`;
+                });
+                selectHtml += `</select>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Datum">${dateStr}</td>
+                    <td data-label="Zyklus"><span style="background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--text-muted);">${getMonthName(res.month)}</span></td>
+                    <td data-label="Beschreibung" style="font-weight: bold;">${item.desc || '-'}</td>
+                    <td data-label="Betrag" class="${colorClass}" style="font-weight: bold; white-space: nowrap;">${sign} ${formatCHF(item.amount)}</td>
+                    <td data-label="Kategorie anpassen">${selectHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateYearlyCategory(month, index, newCat, event) {
+            if (trackerData[month] && trackerData[month][index]) {
+                trackerData[month][index].cat = newCat;
+                saveTrackerData(); // Dies speichert die Daten und aktualisiert automatisch Dashboards & Charts
+                
+                // Visuelles Feedback: Feld leuchtet kurz grün auf
+                const selectElement = event.target;
+                const originalBg = selectElement.style.backgroundColor;
+                const originalColor = selectElement.style.color;
+                
+                selectElement.style.backgroundColor = 'var(--success)';
+                selectElement.style.color = 'white';
+                
+                setTimeout(() => {
+                    selectElement.style.backgroundColor = originalBg;
+                    selectElement.style.color = originalColor;
+                }, 800);
+            }
+        }
+
+        function updateYearlyStats() {
+            let totalInc = 0; let totalExp = 0;
+            let allExp = []; let allInc = [];
+
+            Object.keys(trackerData).forEach(month => {
+                (trackerData[month] || []).forEach(item => {
+                    const amt = parseFloat(item.amount) || 0;
+                    const type = item.type || "Ausgabe";
+                    const cat = item.cat || "Alltag";
+                    const source = item.sourceAccount || "Privatkonto";
+                    const target = item.targetAccount || "";
+
+                    if (cat === "Geschäftsauslagen") return; // Ignorieren wir komplett
+
+                    if (type === "Ausgabe" || (type === "Transfer" && source === "Privatkonto" && target !== "Bargeld")) {
+                        totalExp += amt;
+                        if (type === "Ausgabe") allExp.push(item);
+                    } 
+                    else if (type === "Einnahme" || (type === "Transfer" && target === "Privatkonto")) {
+                        totalInc += amt;
+                        if (type === "Einnahme") allInc.push(item);
+                    }
+                });
+            });
+
+            let profit = totalInc - totalExp;
+            document.getElementById('stat-total-income').innerText = formatCHF(totalInc);
+            document.getElementById('stat-total-expense').innerText = formatCHF(totalExp);
+            
+            let profitEl = document.getElementById('stat-total-profit');
+            let profitCard = document.getElementById('stat-profit-card');
+            profitEl.innerText = formatCHF(profit);
+            
+            if(profit < 0) {
+                profitEl.style.color = '#E74C3C';
+                profitCard.style.borderBottomColor = '#E74C3C';
+            } else {
+                profitEl.style.color = 'var(--success)';
+                profitCard.style.borderBottomColor = 'var(--success)';
+            }
+
+            allExp.sort((a, b) => b.amount - a.amount);
+            allInc.sort((a, b) => b.amount - a.amount);
+
+            const renderList = (list, containerId, isExpense) => {
+                const container = document.getElementById(containerId);
+                container.innerHTML = "";
+                let top5 = list.slice(0, 5);
+                if(top5.length === 0) {
+                    container.innerHTML = "<li style='padding: 10px; color: var(--text-muted);'>Keine Daten</li>";
+                    return;
+                }
+                
+                top5.forEach(item => {
+                    let d = new Date(item.date).toLocaleDateString('de-CH', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                    container.innerHTML += `
+                        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <div style="font-weight: bold;">${item.desc || 'Ohne Beschreibung'}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">${d} | ${item.cat}</div>
+                            </div>
+                            <div style="font-weight: bold; color: ${isExpense ? '#E74C3C' : 'var(--success)'};">${formatCHF(item.amount)}</div>
+                        </li>
+                    `;
+                });
+            };
+
+            renderList(allExp, 'stat-top-expenses', true);
+            renderList(allInc, 'stat-top-incomes', false);
+        }
+
         function updateChart() {
+            updateYearlyStats(); // Aktualisiere auch das Dashboard
+
             const ctx = document.getElementById('myChart'); if(!ctx) return;
             const chartType = document.getElementById('chart-type-selector').value;
             const isDark = document.body.classList.contains('dark-mode');
