@@ -215,18 +215,18 @@
             animation: fadeIn 0.2s ease;
         }
         .modal-content {
-            background: var(--card-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 500px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative;
+            background: var(--card-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 600px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; max-height: 90vh; overflow-y: auto;
         }
-        .modal-content h3 { margin-top: 0; color: var(--primary); }
+        .modal-content h3 { margin-top: 0; color: var(--primary); margin-bottom: 20px; }
         .modal-close {
             position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: var(--text-muted);
         }
         .modal-close:hover { color: var(--text); }
-        .cat-list { list-style: none; padding: 0; margin: 20px 0; max-height: 300px; overflow-y: auto; }
+        .cat-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
         .cat-list li {
-            display: flex; justify-content: space-between; align-items: center; padding: 10px;
-            background: var(--bg); margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;
+            background: var(--card-bg); margin-bottom: 8px; border-radius: 6px; border: 1px solid var(--border);
         }
 
         @media (max-width: 900px) {
@@ -280,20 +280,41 @@
     </style>
 </head>
 <body>
+    <div id="duplicate-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="modal-close" onclick="closeDuplicateModal()">&times;</span>
+            <h3>🔍 Mögliche Duplikate prüfen</h3>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Hier sind Einträge mit exakt gleichem Datum, Typ und Betrag. Eine Abweichung im Text hat verhindert, dass sie automatisch gelöscht wurden. Bitte lösche die falschen Einträge manuell.</p>
+            <div id="duplicate-list-container" style="max-height: 55vh; overflow-y: auto; padding-right: 5px;"></div>
+        </div>
+    </div>
+
     <div id="category-modal" class="modal-overlay">
         <div class="modal-content">
             <span class="modal-close" onclick="closeCategoryModal()">&times;</span>
-            <h3>⚙️ Portfolio-Kategorien</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Erstelle deine eigenen Anlage-Kategorien (Krypto, ETF, Neon, etc.). Diese werden überall im Tool automatisch ergänzt.</p>
+            <h3>⚙️ Einstellungen & Kategorien</h3>
             
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="new-cat-input" placeholder="Neue Kategorie...">
-                <button class="btn" onclick="addInvestCat()" style="background: var(--success);">Hinzufügen</button>
+            <!-- Portfolio Kategorien -->
+            <div style="background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
+                <h4 style="margin-top: 0; color: var(--primary);">🏦 Eigene Konten & Portfolio</h4>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Zusätzliche Konten (Neon, Krypto etc.), die im Tracker und Vermögens-Tab auftauchen sollen.</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" id="new-cat-input" placeholder="Neues Konto...">
+                    <button class="btn" onclick="addInvestCat()" style="background: var(--success);">Hinzufügen</button>
+                </div>
+                <ul class="cat-list" id="modal-cat-list"></ul>
             </div>
-            
-            <ul class="cat-list" id="modal-cat-list">
-                <!-- Dynamisch generiert -->
-            </ul>
+
+            <!-- Tracker Kategorien -->
+            <div style="background: var(--bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                <h4 style="margin-top: 0; color: var(--primary);">📊 Ausgaben-Kategorien</h4>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Kategorisiere deine Ausgaben im Tracker genau so, wie du es brauchst.</p>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <input type="text" id="new-tracker-cat-input" placeholder="Neue Kategorie...">
+                    <button class="btn" onclick="addTrackerCat()" style="background: var(--success);">Hinzufügen</button>
+                </div>
+                <ul class="cat-list" id="modal-tracker-cat-list"></ul>
+            </div>
         </div>
     </div>
 
@@ -308,6 +329,9 @@
                 <p>Plane deine Finanzen und behalte dein Gesamtvermögen im Blick.</p>
             </header>
             <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: flex-end;">
+                <input type="file" id="merge-backup-file" accept=".json" style="display: none;" onchange="mergeBackup(event)">
+                <button class="btn" style="background-color: #3498DB;" onclick="document.getElementById('merge-backup-file').click()">➕ Updates mergen</button>
+
                 <input type="file" id="full-backup-file" accept=".json" style="display: none;" onchange="importFullBackup(event)">
                 <button class="btn" style="background-color: #8E44AD;" onclick="document.getElementById('full-backup-file').click()">📂 Backup laden</button>
                 <button class="btn" style="background-color: #27AE60;" onclick="exportFullBackup()">💾 Backup sichern</button>
@@ -383,8 +407,8 @@
 
             <div class="summary-cards">
                 <div class="card" id="trk-start-card"><h3>Start-Budget (Lohn - Fixkosten)</h3><div class="value" id="trk-start">0.00 CHF</div><div class="sub-value">Dein berechnetes Live-Budget.</div></div>
-                <div class="card warning"><h3>Ausgaben (Total)</h3><div class="value" id="trk-spent">0.00 CHF</div><div class="sub-value">Summe deiner variablen Ausgaben.</div></div>
-                <div class="card income"><h3>Zusätzliche Einnahmen</h3><div class="value" id="trk-extra">0.00 CHF</div><div class="sub-value">Rückzahlungen und Zusatzeinnahmen.</div></div>
+                <div class="card warning"><h3>Variable Ausgaben</h3><div class="value" id="trk-spent">0.00 CHF</div><div class="sub-value">Transfers aufs Sparkonto zählen nicht dazu.</div></div>
+                <div class="card income"><h3>Zusätzliche Einnahmen</h3><div class="value" id="trk-extra">0.00 CHF</div><div class="sub-value">Inkl. Transfers VOM Sparkonto.</div></div>
                 <div class="card income" id="trk-rest-card"><h3>Aktueller Restbetrag</h3><div class="value" id="trk-rest">0.00 CHF</div><div class="sub-value">Noch verfügbar im Monat.</div></div>
             </div>
 
@@ -396,20 +420,11 @@
                         <option value="">⚡ Heute verbuchen...</option>
                     </select>
 
-                    <button class="btn btn-filter" id="btn-filter-geschaeft" onclick="toggleSpesenFilter()" style="display: none;">💼 Nur Geschäftsauslagen</button>
+                    <button class="btn btn-filter" onclick="openCategoryModal()">⚙️ Konten & Kategorien</button>
+                    <button class="btn btn-danger" onclick="removeDuplicates()" title="Entfernt versehentlich doppelt importierte Einträge">🧹 Duplikate bereinigen</button>
                     
                     <select id="tracker-cat-filter" onchange="renderTracker()" style="max-width: 200px; margin: 0;">
-                        <option value="">📂 Alle Kategorien</option>
-                        <option value="Lohn">Lohn</option>
-                        <option value="Alltag">Alltag</option>
-                        <option value="Freizeit">Freizeit</option>
-                        <option value="Transport">Transport</option>
-                        <option value="Sonstiges">Sonstiges</option>
-                        <option value="Einmalig">Einmalig</option>
-                        <option value="Geschäftsauslagen">Geschäftsauslagen</option>
-                        <option value="Fixkosten">Fixkosten</option>
-                        <option value="Sparen">Sparen</option>
-                        <option value="Bargeld">Bargeld</option>
+                        <!-- Wird dynamisch generiert -->
                     </select>
                     
                     <input type="text" id="tracker-search" placeholder="🔍 Suchen..." oninput="renderTracker()" style="max-width: 170px; margin: 0;">
@@ -459,7 +474,7 @@
                 <div class="card income">
                     <h3>Gesamtvermögen (Net Worth)</h3>
                     <div class="value" id="port-total">0.00 CHF</div>
-                    <div class="sub-value">Privatkonto + Sparkonto + Bargeld + Depots.</div>
+                    <div class="sub-value">Alle Konten kombiniert.</div>
                 </div>
                 <div class="card">
                     <h3>Liquide Mittel</h3>
@@ -520,7 +535,7 @@
             <div class="extra-box" style="margin-bottom: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px;">
                     <h4 style="margin: 0;">➕ Neuen Investitions-Snapshot erfassen</h4>
-                    <button class="btn btn-filter" onclick="openCategoryModal()">⚙️ Kategorien verwalten</button>
+                    <button class="btn btn-filter" onclick="openCategoryModal()">⚙️ Konten verwalten</button>
                 </div>
                 
                 <!-- Dynamischer Input Bereich -->
@@ -589,25 +604,19 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Automatische Migration der Startsaldi
-        if (localStorage.getItem('startsaldo')) {
-            localStorage.setItem('startsaldo_privat', localStorage.getItem('startsaldo'));
-            localStorage.removeItem('startsaldo');
-        }
-        if (localStorage.getItem('startsaldo_datum')) {
-            localStorage.setItem('startsaldo_datum_privat', localStorage.getItem('startsaldo_datum'));
-            localStorage.removeItem('startsaldo_datum');
-        }
-
         let trackerSortField = 'date';
         let trackerSortAsc = true;
         let budgetSortField = null;
         let budgetSortAsc = true;
-        let onlySpesenFilter = false;
         
-        // Dynamische Investment Kategorien
+        // Settings / Config Data
         const defaultInvestCats = ["Swissquote", "Bitcoin", "Sparfond", "Säule 3a"];
         let investCats = JSON.parse(localStorage.getItem('invest_cats_v1')) || defaultInvestCats;
+
+        const defaultTrackerCategories = ["Lohn", "Alltag", "Freizeit", "Transport", "Sonstiges", "Einmalig", "Geschäftsauslagen", "Fixkosten", "Sparen", "Bargeld"];
+        let trackerCategories = JSON.parse(localStorage.getItem('tracker_cats_v1')) || defaultTrackerCategories;
+
+        const baseAccounts = ["Privatkonto", "Sparkonto", "Bargeld"];
 
         const chartColors = ['#3498DB', '#E67E22', '#9B59B6', '#7F8C8D', '#1ABC9C', '#D35400', '#E74C3C', '#34495E', '#F1C40F'];
 
@@ -653,16 +662,11 @@
                 if(labelEl) labelEl.innerText = "Noch kein Backup erstellt!";
                 return;
             }
-            
             const lastDate = new Date(parseInt(lastExport));
             if(labelEl) labelEl.innerText = "Letztes Backup: " + lastDate.toLocaleDateString('de-CH');
-            
             const daysSince = (new Date().getTime() - lastDate.getTime()) / (1000 * 3600 * 24);
-            if (daysSince > 14) {
-                warningEl.style.display = 'block';
-            } else {
-                warningEl.style.display = 'none';
-            }
+            if (daysSince > 14) warningEl.style.display = 'block';
+            else warningEl.style.display = 'none';
         }
         
         function updateExportDate() {
@@ -680,13 +684,26 @@
         }
 
         function renderCategoryManager() {
+            // Portfolio / Konten
             const list = document.getElementById('modal-cat-list');
             list.innerHTML = "";
             investCats.forEach((cat, index) => {
                 list.innerHTML += `
                     <li>
                         <span style="font-weight: bold;">${cat}</span>
-                        <button class="btn btn-danger" style="padding: 6px 10px;" onclick="deleteInvestCat(${index})">Löschen</button>
+                        <button class="btn btn-danger" style="padding: 4px 10px;" onclick="deleteInvestCat(${index})">X</button>
+                    </li>
+                `;
+            });
+
+            // Tracker Kategorien
+            const tList = document.getElementById('modal-tracker-cat-list');
+            tList.innerHTML = "";
+            trackerCategories.forEach((cat, index) => {
+                tList.innerHTML += `
+                    <li>
+                        <span style="font-weight: bold;">${cat}</span>
+                        <button class="btn btn-danger" style="padding: 4px 10px;" onclick="deleteTrackerCat(${index})">X</button>
                     </li>
                 `;
             });
@@ -695,9 +712,9 @@
         function addInvestCat() {
             const input = document.getElementById('new-cat-input');
             const val = input.value.trim();
-            if(val && !investCats.includes(val)) {
+            if(val && !investCats.includes(val) && !baseAccounts.includes(val)) {
                 investCats.push(val);
-                saveInvestCats();
+                localStorage.setItem('invest_cats_v1', JSON.stringify(investCats));
                 input.value = "";
                 renderCategoryManager();
                 refreshPortfolioUI();
@@ -706,20 +723,50 @@
 
         function deleteInvestCat(index) {
             const catName = investCats[index];
-            if(confirm(`Kategorie '${catName}' wirklich löschen? Historische Daten bleiben in der Datenbank erhalten, werden aber ausgeblendet.`)) {
+            if(confirm(`Konto '${catName}' wirklich löschen? Historische Daten bleiben erhalten.`)) {
                 investCats.splice(index, 1);
-                saveInvestCats();
+                localStorage.setItem('invest_cats_v1', JSON.stringify(investCats));
                 renderCategoryManager();
                 refreshPortfolioUI();
             }
         }
 
-        function saveInvestCats() {
-            localStorage.setItem('invest_cats_v1', JSON.stringify(investCats));
+        function addTrackerCat() {
+            const input = document.getElementById('new-tracker-cat-input');
+            const val = input.value.trim();
+            if(val && !trackerCategories.includes(val)) {
+                trackerCategories.push(val);
+                localStorage.setItem('tracker_cats_v1', JSON.stringify(trackerCategories));
+                input.value = "";
+                renderCategoryManager();
+                updateTrackerFilters();
+                renderTracker();
+            }
+        }
+
+        function deleteTrackerCat(index) {
+            const catName = trackerCategories[index];
+            if(confirm(`Kategorie '${catName}' wirklich löschen?`)) {
+                trackerCategories.splice(index, 1);
+                localStorage.setItem('tracker_cats_v1', JSON.stringify(trackerCategories));
+                renderCategoryManager();
+                updateTrackerFilters();
+                renderTracker();
+            }
+        }
+
+        function updateTrackerFilters() {
+            const filterDropdown = document.getElementById('tracker-cat-filter');
+            if(!filterDropdown) return;
+            const currentVal = filterDropdown.value;
+            let html = '<option value="">📂 Alle Kategorien</option>';
+            trackerCategories.forEach(cat => { html += `<option value="${cat}">${cat}</option>`; });
+            filterDropdown.innerHTML = html;
+            filterDropdown.value = currentVal;
         }
 
         function refreshPortfolioUI() {
-            renderTracker(); // Zielkonten updaten
+            renderTracker();
             renderPortfolioInputs();
             renderPortfolio();
             updatePortfolioChart();
@@ -731,7 +778,10 @@
             document.getElementById('tab-' + tabId).classList.add('active');
             document.getElementById('btn-tab-' + tabId).classList.add('active');
 
-            if (tabId === 'tracker') renderTracker(); 
+            if (tabId === 'tracker') {
+                updateTrackerFilters();
+                renderTracker(); 
+            }
             else if (tabId === 'stats') updateChart();
             else if (tabId === 'portfolio') { 
                 calculateLiveBalances(); 
@@ -743,10 +793,8 @@
         const defaultData = [
             {kategorie: "Gehalt / Lohn", typ: "Einnahmen", betrag: 0.00, details: ""},
             {kategorie: "Miete", typ: "Fixkosten", betrag: 0.00, details: ""},
-            {kategorie: "Krankenkasse", typ: "Fixkosten", betrag: 0.00, details: ""},
             {kategorie: "Sparen", typ: "Sparen & Investieren", betrag: 0.00, details: ""},
-            {kategorie: "Wocheneinkauf", typ: "Alltag", betrag: 0.00, details: ""},
-            {kategorie: "Tanken / ÖV", typ: "Transport", betrag: 0.00, details: ""}
+            {kategorie: "Alltag", typ: "Alltag", betrag: 0.00, details: ""}
         ];
         let initialData = [];
         let sackgeldDetailsStr = "";
@@ -768,18 +816,13 @@
             if (confirm("Wirklich alles löschen und Standardwerte laden?")) {
                 initialData = JSON.parse(JSON.stringify(defaultData));
                 sackgeldDetailsStr = ""; document.getElementById('sackgeld-details').value = sackgeldDetailsStr;
-                budgetSortField = null;
-                saveBudgetData(); renderBudgetTable();
+                budgetSortField = null; saveBudgetData(); renderBudgetTable();
             }
         }
 
         function sortBudget(field) {
-            if (budgetSortField === field) {
-                budgetSortAsc = !budgetSortAsc;
-            } else {
-                budgetSortField = field;
-                budgetSortAsc = true;
-            }
+            if (budgetSortField === field) budgetSortAsc = !budgetSortAsc;
+            else { budgetSortField = field; budgetSortAsc = true; }
             renderBudgetTable();
         }
 
@@ -790,18 +833,11 @@
             });
 
             let indexed = initialData.map((item, originalIndex) => ({ item, originalIndex }));
-            
             if (budgetSortField) {
                 indexed.sort((a, b) => {
-                    let valA = a.item[budgetSortField];
-                    let valB = b.item[budgetSortField];
-                    if (typeof valA === 'string') {
-                        valA = (valA || '').toLowerCase();
-                        valB = (valB || '').toLowerCase();
-                        return budgetSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                    } else {
-                        return budgetSortAsc ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
-                    }
+                    let valA = a.item[budgetSortField]; let valB = b.item[budgetSortField];
+                    if (typeof valA === 'string') return budgetSortAsc ? (valA||'').localeCompare(valB||'') : (valB||'').localeCompare(valA||'');
+                    else return budgetSortAsc ? (valA||0) - (valB||0) : (valB||0) - (valA||0);
                 });
             }
 
@@ -819,14 +855,12 @@
                 `;
                 tbody.appendChild(tr);
             });
-            calculateBudgetTotals();
-            updateQuickAddDropdown();
+            calculateBudgetTotals(); updateQuickAddDropdown();
         }
 
         function updateQuickAddDropdown() {
             const dropdown = document.getElementById('tracker-quick-add');
             if (!dropdown) return;
-            
             let options = '<option value="">⚡ Heute verbuchen...</option>';
             initialData.forEach((item, index) => {
                 if (item.betrag > 0 && (item.typ === "Einnahmen" || item.typ === "Fixkosten" || item.typ === "Sparen & Investieren")) {
@@ -871,9 +905,6 @@
         let currentDateTracker = new Date();
         let currentMonthKey = `${currentDateTracker.getFullYear()}-${String(currentDateTracker.getMonth() + 1).padStart(2, '0')}`;
         
-        const trackerCategories = ["Lohn", "Alltag", "Freizeit", "Transport", "Sonstiges", "Einmalig", "Geschäftsauslagen", "Fixkosten", "Sparen", "Bargeld"];
-        const baseTransferAccounts = ["Privatkonto", "Sparkonto", "Bargeld"];
-
         function getMonthName(dateString) {
             if(!dateString) return "";
             const [year, month] = dateString.split('-');
@@ -910,33 +941,21 @@
         
         function quickAddFixkosten(indexStr) {
             if (indexStr === "") return;
-            const index = parseInt(indexStr);
-            const item = initialData[index];
+            const index = parseInt(indexStr); const item = initialData[index];
             if (!item) return;
-
             if (!trackerData[currentMonthKey]) trackerData[currentMonthKey] = [];
             
-            let type = "";
-            let target = "";
-            let cat = "Sonstiges";
+            let type = ""; let target = ""; let cat = "Sonstiges";
             
-            if (item.typ === "Einnahmen") {
-                type = "Einnahme";
-                cat = "Lohn";
-            } else if (item.typ === "Fixkosten") {
-                type = "Ausgabe";
-                cat = "Fixkosten";
-            } else if (item.typ === "Sparen & Investieren") {
-                type = "Transfer";
-                cat = "Sparen";
-                
-                // Smart Match für Target Account basierend auf dynamischen Kategorien
+            if (item.typ === "Einnahmen") { type = "Einnahme"; cat = "Lohn"; } 
+            else if (item.typ === "Fixkosten") { type = "Ausgabe"; cat = "Fixkosten"; } 
+            else if (item.typ === "Sparen & Investieren") {
+                type = "Transfer"; cat = "Sparen";
                 let nameLower = item.kategorie.toLowerCase();
                 let matched = false;
                 investCats.forEach(invCat => {
                     if (nameLower.includes(invCat.toLowerCase())) { target = invCat; matched = true; }
                 });
-                
                 if(!matched) {
                     if(nameLower.includes("3a") || nameLower.includes("säule")) target = "Säule 3a";
                     else if(nameLower.includes("bitcoin") || nameLower.includes("krypto")) target = "Bitcoin";
@@ -944,21 +963,12 @@
                 }
             }
 
-            const entryDate = getTodayString();
-
             trackerData[currentMonthKey].push({
-                date: entryDate,
-                sourceAccount: "Privatkonto",
-                type: type,
-                targetAccount: target,
-                desc: item.kategorie,
-                cat: cat,
-                amount: item.betrag
+                date: getTodayString(), sourceAccount: "Privatkonto", type: type,
+                targetAccount: target, desc: item.kategorie, cat: cat, amount: item.betrag
             });
 
-            saveTrackerData();
-            renderTracker();
-            
+            saveTrackerData(); renderTracker();
             document.getElementById('tracker-quick-add').value = "";
         }
 
@@ -971,25 +981,118 @@
             trackerData[currentMonthKey].splice(index, 1);
             saveTrackerData(); renderTracker();
         }
-
-        function sortTracker(field) {
-            if (trackerSortField === field) {
-                trackerSortAsc = !trackerSortAsc;
-            } else {
-                trackerSortField = field;
-                trackerSortAsc = true;
-            }
-            renderTracker();
+        function duplicateTrackerRow(index) {
+            const itemToCopy = trackerData[currentMonthKey][index];
+            trackerData[currentMonthKey].push(JSON.parse(JSON.stringify(itemToCopy)));
+            saveTrackerData(); renderTracker();
         }
 
-        function toggleSpesenFilter() {
-            onlySpesenFilter = !onlySpesenFilter;
-            const btn = document.getElementById('btn-filter-geschaeft');
-            if (onlySpesenFilter) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
+        function removeDuplicates() {
+            let removedExactCount = 0;
+            let potentialDuplicates = []; 
+
+            for (let month in trackerData) {
+                let uniqueEntries = [];
+                let seen = new Set();
+                
+                trackerData[month].forEach(item => {
+                    // Ignoriere Leerzeichen und Gross-/Kleinschreibung für den Auto-Filter
+                    let cleanDesc = (item.desc || "").trim().replace(/\s+/g, ' ').toLowerCase();
+                    let hash = `${item.date}_${item.type}_${item.amount}_${cleanDesc}_${item.cat}_${item.sourceAccount}_${item.targetAccount}`;
+                    if (!seen.has(hash)) {
+                        seen.add(hash);
+                        uniqueEntries.push(item);
+                    } else {
+                        removedExactCount++;
+                    }
+                });
+                trackerData[month] = uniqueEntries;
+
+                let grouped = {};
+                trackerData[month].forEach((item, index) => {
+                    let key = `${item.date}_${item.type}_${item.amount}`;
+                    if(!grouped[key]) grouped[key] = [];
+                    grouped[key].push({ ...item, _month: month, _index: index }); 
+                });
+
+                for (let key in grouped) {
+                    if (grouped[key].length > 1) {
+                        potentialDuplicates.push(grouped[key]);
+                    }
+                }
             }
+
+            if (removedExactCount > 0) {
+                saveTrackerData();
+                renderTracker();
+            }
+
+            if (potentialDuplicates.length > 0) {
+                openDuplicateModal(potentialDuplicates, removedExactCount);
+            } else {
+                let msg = removedExactCount > 0 ? `✅ ${removedExactCount} exakte Duplikate entfernt.\n\n👍 Keine weiteren potenziellen Duplikate gefunden!` : "👍 Alles sauber! Keine doppelten Einträge (Datum & Betrag) gefunden.";
+                alert(msg);
+            }
+        }
+
+        function openDuplicateModal(duplicates, removedExactCount) {
+            const modal = document.getElementById('duplicate-modal');
+            const listContainer = document.getElementById('duplicate-list-container');
+            listContainer.innerHTML = '';
+            
+            if (removedExactCount > 0) {
+                listContainer.innerHTML += `<div style="background: var(--success); color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px;">✅ Es wurden bereits ${removedExactCount} 100% exakte Duplikate (auch mit Leerzeichen-Fehlern) im Hintergrund bereinigt.</div>`;
+            }
+
+            duplicates.forEach((group) => {
+                let html = `<div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; padding: 15px;">`;
+                html += `<h4 style="margin-top: 0; color: var(--primary); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 10px;">📅 ${new Date(group[0].date).toLocaleDateString('de-CH')} | 💰 ${formatCHF(group[0].amount)} | ${group[0].type === 'Ausgabe' ? '📉' : (group[0].type === 'Einnahme' ? '📈' : '🔀')} ${group[0].type}</h4>`;
+                
+                group.forEach((item) => {
+                    let itemJson = encodeURIComponent(JSON.stringify({
+                        month: item._month, date: item.date, amount: item.amount, type: item.type, desc: item.desc, cat: item.cat
+                    }));
+                    
+                    html += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 10px; border-radius: 6px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div>
+                                <div style="font-weight: bold;">${item.desc || '- Keine Beschreibung -'}</div>
+                                <div style="font-size: 12px; color: var(--text-muted);">Kategorie: <b>${item.cat}</b> | Konto: ${item.sourceAccount} ${item.targetAccount ? '➜ ' + item.targetAccount : ''}</div>
+                            </div>
+                            <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick="deleteDuplicateItem('${itemJson}')">Löschen</button>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                listContainer.innerHTML += html;
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicate-modal').style.display = 'none';
+        }
+
+        function deleteDuplicateItem(encodedItem) {
+            try {
+                let itemToDel = JSON.parse(decodeURIComponent(encodedItem));
+                let monthArr = trackerData[itemToDel.month];
+                if (monthArr) {
+                    let idx = monthArr.findIndex(i => i.date === itemToDel.date && i.amount === itemToDel.amount && i.type === itemToDel.type && i.desc === itemToDel.desc && i.cat === itemToDel.cat);
+                    if (idx > -1) {
+                        monthArr.splice(idx, 1);
+                        saveTrackerData();
+                        renderTracker();
+                        removeDuplicates(); // Modal aktualisieren
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function sortTracker(field) {
+            if (trackerSortField === field) trackerSortAsc = !trackerSortAsc;
+            else { trackerSortField = field; trackerSortAsc = true; }
             renderTracker();
         }
 
@@ -1007,38 +1110,29 @@
             const searchInput = document.getElementById('tracker-search');
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
             const catFilter = document.getElementById('tracker-cat-filter') ? document.getElementById('tracker-cat-filter').value : '';
-            const isFiltering = (searchTerm !== '') || (catFilter !== '') || onlySpesenFilter;
+            const isFiltering = (searchTerm !== '') || (catFilter !== '');
             let filteredSum = 0;
             
             let indexedEntries = entries.map((item, index) => ({ item, originalIndex: index }));
             
             indexedEntries.sort((a, b) => {
-                let valA = a.item[trackerSortField];
-                let valB = b.item[trackerSortField];
+                let valA = a.item[trackerSortField]; let valB = b.item[trackerSortField];
                 if (trackerSortField === 'date') {
-                    valA = new Date(valA || '1970-01-01');
-                    valB = new Date(valB || '1970-01-01');
-                    return trackerSortAsc ? valA - valB : valB - valA;
+                    return trackerSortAsc ? new Date(valA||'1970') - new Date(valB||'1970') : new Date(valB||'1970') - new Date(valA||'1970');
                 } else if (trackerSortField === 'amount') {
-                    valA = parseFloat(valA) || 0;
-                    valB = parseFloat(valB) || 0;
-                    return trackerSortAsc ? valA - valB : valB - valA;
+                    return trackerSortAsc ? (parseFloat(valA)||0) - (parseFloat(valB)||0) : (parseFloat(valB)||0) - (parseFloat(valA)||0);
                 } else {
-                    valA = (valA || '').toLowerCase();
-                    valB = (valB || '').toLowerCase();
-                    return trackerSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    return trackerSortAsc ? (valA||'').localeCompare(valB||'') : (valB||'').localeCompare(valA||'');
                 }
             });
 
-            // Dynamische Transfer-Ziele bauen
-            const transferAccounts = [...baseTransferAccounts, ...investCats];
+            const allAccounts = [...baseAccounts, ...investCats];
             
             indexedEntries.forEach((entryObj) => {
                 const item = entryObj.item; const index = entryObj.originalIndex;
                 if (!item.type) item.type = "Ausgabe"; if (!item.cat) item.cat = "Alltag";
                 if (!item.sourceAccount) item.sourceAccount = "Privatkonto";
 
-                if (onlySpesenFilter && item.cat !== 'Geschäftsauslagen') return;
                 if (catFilter && item.cat !== catFilter) return;
 
                 if (searchTerm !== '') {
@@ -1056,17 +1150,20 @@
 
                 let transferDetailsHtml = '';
                 if (item.type === 'Transfer') {
-                    transferDetailsHtml = `<div style="margin-top: 5px;"><select onchange="updateTrackerData(${index}, 'targetAccount', this.value)" style="font-size: 12px; padding: 4px;"><option value="">-- Zielkonto wählen --</option>${transferAccounts.map(acc => `<option value="${acc}" ${acc === item.targetAccount ? 'selected' : ''}>➜ ${acc}</option>`).join('')}</select></div>`;
+                    transferDetailsHtml = `<div style="margin-top: 5px;"><select onchange="updateTrackerData(${index}, 'targetAccount', this.value)" style="font-size: 12px; padding: 4px;"><option value="">-- Ziel wählen --</option>${allAccounts.map(acc => `<option value="${acc}" ${acc === item.targetAccount ? 'selected' : ''}>➜ ${acc}</option>`).join('')}</select></div>`;
                 }
+                
+                let sAccHtml = allAccounts.map(acc => {
+                    let icon = '🏦 '; if(acc === 'Privatkonto') icon = '💳 '; else if(acc === 'Bargeld') icon = '💵 ';
+                    return `<option value="${acc}" ${item.sourceAccount === acc ? 'selected' : ''}>${icon}${acc}</option>`;
+                }).join('');
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td data-label="Datum"><input type="date" value="${item.date}" onchange="updateTrackerData(${index}, 'date', this.value)"></td>
                     <td data-label="Konto & Typ">
                         <select onchange="updateTrackerData(${index}, 'sourceAccount', this.value)" style="margin-bottom: 5px; font-size: 12px; padding: 4px; font-weight: bold;">
-                            <option value="Privatkonto" ${item.sourceAccount === 'Privatkonto' ? 'selected' : ''}>💳 Privat</option>
-                            <option value="Sparkonto" ${item.sourceAccount === 'Sparkonto' ? 'selected' : ''}>🏦 Spar</option>
-                            <option value="Bargeld" ${item.sourceAccount === 'Bargeld' ? 'selected' : ''}>💵 Bar</option>
+                            ${sAccHtml}
                         </select>
                         <select onchange="updateTrackerData(${index}, 'type', this.value)" style="color: ${item.type === 'Einnahme' ? 'var(--success)' : (item.type === 'Transfer' ? '#8E44AD' : 'inherit')}; font-size: 12px; padding: 4px;">
                             <option value="Ausgabe" ${item.type === 'Ausgabe' ? 'selected' : ''}>📉 Ausgabe</option>
@@ -1087,28 +1184,16 @@
             if (filterLabel) {
                 if (isFiltering) { 
                     filterLabel.style.display = 'block'; 
-                    let filterName = 'Filter';
-                    if (onlySpesenFilter) filterName = 'Geschäftsauslagen Netto';
-                    else if (catFilter) filterName = catFilter;
-                    filterLabel.innerText = `Gefiltert (${filterName}): ` + (filteredSum < 0 ? "-" + formatCHF(Math.abs(filteredSum)) : formatCHF(filteredSum)); 
-                } else { 
-                    filterLabel.style.display = 'none'; 
-                }
+                    filterLabel.innerText = `Gefiltert: ` + (filteredSum < 0 ? "-" + formatCHF(Math.abs(filteredSum)) : formatCHF(filteredSum)); 
+                } else { filterLabel.style.display = 'none'; }
             }
             
             let expensesOnly = indexedEntries.map(e => e.item).filter(item => item.type === 'Ausgabe' && item.cat !== 'Geschäftsauslagen' && item.cat !== 'Fixkosten');
             expensesOnly.sort((a,b) => b.amount - a.amount);
             let top3 = expensesOnly.slice(0, 3);
             const top3list = document.getElementById('top-3-list');
-            if (top3.length === 0) {
-                top3list.innerHTML = "<li style='color: var(--text-muted);'>Keine variablen Ausgaben in diesem Monat.</li>";
-            } else {
-                top3list.innerHTML = top3.map(e => `
-                    <li>
-                        <div class="top3-desc">${e.desc || 'Ohne Beschreibung'} <span class="top3-cat">${e.cat}</span></div>
-                        <div class="top3-amount">${formatCHF(e.amount)}</div>
-                    </li>`).join('');
-            }
+            if (top3.length === 0) top3list.innerHTML = "<li style='color: var(--text-muted);'>Keine variablen Ausgaben.</li>";
+            else top3list.innerHTML = top3.map(e => `<li><div class="top3-desc">${e.desc || 'Ohne Beschreibung'} <span class="top3-cat">${e.cat}</span></div><div class="top3-amount">${formatCHF(e.amount)}</div></li>`).join('');
             
             calculateTrackerTotals();
         }
@@ -1128,33 +1213,34 @@
                 const amt = parseFloat(item.amount) || 0;
                 const cat = item.cat || "Alltag";
                 const type = item.type || "Ausgabe";
+                const source = item.sourceAccount || "Privatkonto";
+                const target = item.targetAccount || "";
+
+                if (cat === "Geschäftsauslagen") return; // Ignore for net budget
 
                 if (catSums[cat] !== undefined) {
-                    if (type === "Ausgabe" || type === "Transfer") catSums[cat] += amt;
-                    else if (type === "Einnahme") {
-                        if (cat === "Geschäftsauslagen") catSums[cat] -= amt;
-                        else catSums[cat] += amt; 
-                    }
+                    if (type === "Ausgabe") catSums[cat] += amt;
+                    else if (type === "Einnahme") catSums[cat] -= amt;
+                    else if (type === "Transfer" && source === "Privatkonto") catSums[cat] += amt; // Show outflow in cat
                 }
 
-                if (cat === "Geschäftsauslagen") return; 
-
-                if (type === "Ausgabe" || type === "Transfer") {
-                    if (cat === "Fixkosten" || cat === "Sparen") {
-                        actualFixkosten += amt; // Zählt voll gegen das Budget
-                    } else {
-                        actualSpent += amt;
-                    }
+                if (type === "Ausgabe") {
+                    if (cat === "Fixkosten" || cat === "Sparen") actualFixkosten += amt;
+                    else actualSpent += amt;
                 } else if (type === "Einnahme") {
-                    if (cat === "Lohn" || item.desc.toLowerCase().includes("lohn") || item.desc.toLowerCase().includes("gehalt")) {
-                        actualLohn += amt;
-                    } else {
-                        extraIncome += amt; 
+                    if (cat === "Lohn" || item.desc.toLowerCase().includes("lohn") || item.desc.toLowerCase().includes("gehalt")) actualLohn += amt;
+                    else extraIncome += amt; 
+                } else if (type === "Transfer") {
+                    if (source === "Privatkonto" && target !== "Bargeld") {
+                        if (cat === "Sparen" || cat === "Fixkosten") actualFixkosten += amt;
+                        else actualSpent += amt;
+                    } 
+                    else if (target === "Privatkonto") {
+                        extraIncome += amt;
                     }
                 }
             });
 
-            // Start-Budget ist jetzt live (Lohn - Fixkosten)
             let startBudget = actualLohn - actualFixkosten;
             let rest = startBudget - actualSpent + extraIncome;
 
@@ -1162,17 +1248,11 @@
             let startCard = document.getElementById('trk-start-card');
 
             if (actualLohn === 0 && actualFixkosten === 0 && actualSpent === 0) {
-                 startEl.innerText = "0.00 CHF";
-                 startEl.style.color = 'inherit';
-                 startCard.style.borderBottomColor = 'var(--accent)';
+                 startEl.innerText = "0.00 CHF"; startEl.style.color = 'inherit'; startCard.style.borderBottomColor = 'var(--accent)';
             } else if (actualLohn === 0 && entries.length > 0) {
-                 startEl.innerText = "⚠️ Lohn fehlt!";
-                 startEl.style.color = '#E74C3C';
-                 startCard.style.borderBottomColor = '#E74C3C';
+                 startEl.innerText = "⚠️ Lohn fehlt!"; startEl.style.color = '#E74C3C'; startCard.style.borderBottomColor = '#E74C3C';
             } else {
-                 startEl.innerText = formatCHF(startBudget);
-                 startEl.style.color = 'inherit';
-                 startCard.style.borderBottomColor = 'var(--accent)';
+                 startEl.innerText = formatCHF(startBudget); startEl.style.color = 'inherit'; startCard.style.borderBottomColor = 'var(--accent)';
             }
 
             document.getElementById('trk-spent').innerText = formatCHF(actualSpent);
@@ -1182,13 +1262,8 @@
             let restCard = document.getElementById('trk-rest-card');
             restEl.innerText = formatCHF(rest);
             
-            if (rest < 0) { 
-                restEl.style.color = '#E74C3C'; 
-                restCard.style.borderBottomColor = '#E74C3C'; 
-            } else { 
-                restEl.style.color = 'inherit'; 
-                restCard.style.borderBottomColor = 'var(--success)'; 
-            }
+            if (rest < 0) { restEl.style.color = '#E74C3C'; restCard.style.borderBottomColor = '#E74C3C'; } 
+            else { restEl.style.color = 'inherit'; restCard.style.borderBottomColor = 'var(--success)'; }
             
             const catGrid = document.getElementById('category-summary-grid');
             if (catGrid) {
@@ -1196,8 +1271,7 @@
                 trackerCategories.forEach(cat => {
                     if (cat === "Geschäftsauslagen") return; 
                     let val = catSums[cat] || 0;
-                    
-                    if (val === 0) return; // BLENDET KATEGORIE AUS WENN WERT 0 IST
+                    if (val === 0) return;
                     
                     let color = "var(--accent)";
                     if(cat === "Lohn" || cat === "Einnahmen") color = "var(--success)";
@@ -1209,8 +1283,7 @@
                     
                     htmlStr += `<div class="cat-item" style="border-left-color: ${color}"><div class="cat-name">${cat}</div><div class="cat-sum">${formatCHF(val)}</div></div>`;
                 });
-                
-                if (htmlStr === '') htmlStr = '<div style="color: var(--text-muted); font-size: 14px;">Keine Kategorieausgaben vorhanden.</div>';
+                if (htmlStr === '') htmlStr = '<div style="color: var(--text-muted); font-size: 14px;">Keine Kategorieausgaben.</div>';
                 catGrid.innerHTML = htmlStr;
             }
         }
@@ -1237,61 +1310,8 @@
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'Ausgaben_Tracker_Komplett.csv'; a.click();
+            const a = document.createElement('a'); a.href = url; a.download = 'Ausgaben_Tracker.csv'; a.click();
             updateExportDate();
-        }
-
-        function importBudgetCSV(event) {
-            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
-            reader.onload = function(e) {
-                const lines = e.target.result.split('\n').filter(line => line.trim() !== '');
-                let newData = [];
-                for (let i = 1; i < lines.length; i++) {
-                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 6) { 
-                        // Fallback altes Format
-                        const kat = cols[1].replace(/^"|"$/g, '').trim();
-                        if (kat.includes("Sackgeld (Rest)") || kat.includes("Sackgeld (Automatisch)")) continue;
-                        newData.push({kategorie: kat, typ: cols[2].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[3]) || 0, details: cols[6] ? cols[6].replace(/^"|"$/g, '').trim() : ""});
-                    } else if (cols.length === 5) { 
-                        // Neues Format
-                        const kat = cols[0].replace(/^"|"$/g, '').trim();
-                        if (kat.includes("Sackgeld (Rest)")) continue;
-                        newData.push({kategorie: kat, typ: cols[1].replace(/^"|"$/g, '').trim(), betrag: parseFloat(cols[2]) || 0, details: cols[4] ? cols[4].replace(/^"|"$/g, '').trim() : ""});
-                    }
-                }
-                if (newData.length > 0) { initialData = newData; saveBudgetData(); renderBudgetTable(); alert("✅ Budget importiert!"); }
-            };
-            reader.readAsText(file); event.target.value = ''; 
-        }
-
-        function importTrackerCSV(event) {
-            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
-            reader.onload = function(e) {
-                const lines = e.target.result.split('\n').filter(line => line.trim() !== '');
-                let newTrackerData = {};
-                for (let i = 1; i < lines.length; i++) {
-                    const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 6) {
-                        const monat = cols[0].replace(/^"|"$/g, '').trim();
-                        if (!newTrackerData[monat]) newTrackerData[monat] = [];
-                        if (cols.length >= 8) {
-                            newTrackerData[monat].push({ date: cols[1].replace(/^"|"$/g, '').trim(), sourceAccount: cols[2].replace(/^"|"$/g, '').trim(), type: cols[3].replace(/^"|"$/g, '').trim(), targetAccount: cols[4].replace(/^"|"$/g, '').trim(), desc: cols[5].replace(/^"|"$/g, '').trim(), cat: cols[6].replace(/^"|"$/g, '').trim(), amount: parseFloat(cols[7]) || 0 });
-                        } else if (cols.length === 7) {
-                            newTrackerData[monat].push({ date: cols[1].replace(/^"|"$/g, '').trim(), sourceAccount: "Privatkonto", type: cols[2].replace(/^"|"$/g, '').trim(), targetAccount: cols[3].replace(/^"|"$/g, '').trim(), desc: cols[4].replace(/^"|"$/g, '').trim(), cat: cols[5].replace(/^"|"$/g, '').trim(), amount: parseFloat(cols[6]) || 0 });
-                        } else {
-                            newTrackerData[monat].push({ date: cols[1].replace(/^"|"$/g, '').trim(), sourceAccount: "Privatkonto", type: cols[2].replace(/^"|"$/g, '').trim(), targetAccount: "", desc: cols[3].replace(/^"|"$/g, '').trim(), cat: cols[4].replace(/^"|"$/g, '').trim(), amount: parseFloat(cols[5]) || 0 });
-                        }
-                    }
-                }
-                if (Object.keys(newTrackerData).length > 0) {
-                    trackerData = newTrackerData; saveTrackerData();
-                    const importedMonths = Object.keys(trackerData).sort();
-                    if (importedMonths.length > 0) currentMonthKey = importedMonths[importedMonths.length - 1];
-                    renderTracker(); alert("✅ Tracker importiert!");
-                }
-            };
-            reader.readAsText(file); event.target.value = ''; 
         }
 
         function exportFullBackup() {
@@ -1301,21 +1321,18 @@
                 tracker_data_v4: localStorage.getItem('tracker_data_v4'),
                 portfolio_data_v1: localStorage.getItem('portfolio_data_v1'),
                 invest_cats_v1: localStorage.getItem('invest_cats_v1'),
-                
+                tracker_cats_v1: localStorage.getItem('tracker_cats_v1'),
                 startsaldo_privat: localStorage.getItem('startsaldo_privat'),
                 startsaldo_datum_privat: localStorage.getItem('startsaldo_datum_privat'),
-                
                 startsaldo_sparkonto: localStorage.getItem('startsaldo_sparkonto'),
                 startsaldo_datum_sparkonto: localStorage.getItem('startsaldo_datum_sparkonto'),
-                
                 startsaldo_bargeld: localStorage.getItem('startsaldo_bargeld'),
                 startsaldo_datum_bargeld: localStorage.getItem('startsaldo_datum_bargeld'),
-
                 last_export_date_v4: new Date().getTime().toString()
             };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'Finanz_Komplett_Backup.json'; a.click();
+            const a = document.createElement('a'); a.href = url; a.download = 'Finanz_Backup.json'; a.click();
             updateExportDate();
         }
 
@@ -1329,36 +1346,94 @@
                     if (data.tracker_data_v4) localStorage.setItem('tracker_data_v4', data.tracker_data_v4);
                     if (data.portfolio_data_v1) localStorage.setItem('portfolio_data_v1', data.portfolio_data_v1);
                     if (data.invest_cats_v1) localStorage.setItem('invest_cats_v1', data.invest_cats_v1);
+                    if (data.tracker_cats_v1) localStorage.setItem('tracker_cats_v1', data.tracker_cats_v1);
                     
                     if (data.startsaldo_privat) localStorage.setItem('startsaldo_privat', data.startsaldo_privat);
                     if (data.startsaldo_datum_privat) localStorage.setItem('startsaldo_datum_privat', data.startsaldo_datum_privat);
-                    
                     if (data.startsaldo_sparkonto) localStorage.setItem('startsaldo_sparkonto', data.startsaldo_sparkonto);
                     if (data.startsaldo_datum_sparkonto) localStorage.setItem('startsaldo_datum_sparkonto', data.startsaldo_datum_sparkonto);
-                    
                     if (data.startsaldo_bargeld) localStorage.setItem('startsaldo_bargeld', data.startsaldo_bargeld);
                     if (data.startsaldo_datum_bargeld) localStorage.setItem('startsaldo_datum_bargeld', data.startsaldo_datum_bargeld);
                     
                     if (data.last_export_date_v4) localStorage.setItem('last_export_date_v4', data.last_export_date_v4);
                     
-                    alert("✅ Komplett-Backup geladen!");
-                    location.reload();
-                } catch (err) {
-                    alert("❌ Fehler beim Lesen der Datei.");
-                }
+                    alert("✅ Backup geladen!"); location.reload();
+                } catch (err) { alert("❌ Fehler beim Lesen der Datei."); }
             };
             reader.readAsText(file); event.target.value = ''; 
         }
 
-        function duplicateTrackerRow(index) {
-            const itemToCopy = trackerData[currentMonthKey][index];
-            const newItem = JSON.parse(JSON.stringify(itemToCopy));
-            trackerData[currentMonthKey].push(newItem);
-            saveTrackerData();
-            renderTracker();
-        }
+        function mergeBackup(event) {
+            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    let mergedCount = 0; 
+                    let mergedPortCount = 0;
+                    
+                    // 1. Tracker Daten mergen (mit Duplikat-Schutz)
+                    let newTracker = null;
+                    if (data.tracker_data_v4) newTracker = typeof data.tracker_data_v4 === 'string' ? JSON.parse(data.tracker_data_v4) : data.tracker_data_v4;
+                    else if (Object.keys(data).some(k => k.match(/^\d{4}-\d{2}$/))) newTracker = data;
 
-        window.myChartInstance = null;
+                    if (newTracker) {
+                        for (const month in newTracker) {
+                            if (month === "last_export_date_v4" || typeof newTracker[month] === 'string') continue;
+                            if (!trackerData[month]) trackerData[month] = [];
+                            
+                            newTracker[month].forEach(incoming => {
+                                let hash = `${incoming.date}_${incoming.type}_${incoming.amount}_${incoming.desc}_${incoming.cat}_${incoming.sourceAccount}_${incoming.targetAccount}`;
+                                let isDuplicate = trackerData[month].some(existing => {
+                                     return `${existing.date}_${existing.type}_${existing.amount}_${existing.desc}_${existing.cat}_${existing.sourceAccount}_${existing.targetAccount}` === hash;
+                                });
+                                if(!isDuplicate) {
+                                    trackerData[month].push(incoming);
+                                    mergedCount++;
+                                }
+                            });
+                        }
+                        saveTrackerData();
+                    }
+                    
+                    // 2. Portfolio Daten mergen
+                    let newPortfolio = null;
+                    if (data.portfolio_data_v1) newPortfolio = typeof data.portfolio_data_v1 === 'string' ? JSON.parse(data.portfolio_data_v1) : data.portfolio_data_v1;
+                    
+                    if (newPortfolio && Array.isArray(newPortfolio)) {
+                        newPortfolio.forEach(incomingSnap => {
+                            const existingIndex = portfolioData.findIndex(p => p.date === incomingSnap.date);
+                            if (existingIndex >= 0) {
+                                portfolioData[existingIndex] = incomingSnap; 
+                            } else {
+                                portfolioData.push(incomingSnap);
+                            }
+                            mergedPortCount++;
+                        });
+                        savePortfolioData();
+                    }
+                    
+                    // 3. Neue Kategorien übernehmen
+                    if (data.invest_cats_v1) {
+                        let incomingInvCats = typeof data.invest_cats_v1 === 'string' ? JSON.parse(data.invest_cats_v1) : data.invest_cats_v1;
+                        incomingInvCats.forEach(c => { if(!investCats.includes(c)) investCats.push(c); });
+                        localStorage.setItem('invest_cats_v1', JSON.stringify(investCats));
+                    }
+                    if (data.tracker_cats_v1) {
+                        let incomingTrkCats = typeof data.tracker_cats_v1 === 'string' ? JSON.parse(data.tracker_cats_v1) : data.tracker_cats_v1;
+                        incomingTrkCats.forEach(c => { if(!trackerCategories.includes(c)) trackerCategories.push(c); });
+                        localStorage.setItem('tracker_cats_v1', JSON.stringify(trackerCategories));
+                    }
+
+                    if (mergedCount > 0 || mergedPortCount > 0) {
+                        alert(`✅ Erfolgreich gemerged!\n- ${mergedCount} neue Transaktionen.\n- ${mergedPortCount} Portfolio-Snapshots importiert.`);
+                        location.reload();
+                    } else {
+                        alert("🤷 Keine neuen Daten gefunden. Alles war bereits vorhanden!");
+                    }
+                } catch (err) { alert("❌ Formatierungsfehler in der Datei."); }
+            };
+            reader.readAsText(file); event.target.value = ''; 
+        }
 
         function updateChart() {
             const ctx = document.getElementById('myChart'); if(!ctx) return;
@@ -1371,37 +1446,36 @@
             const monthsRaw = Object.keys(trackerData).sort();
             const monthLabels = monthsRaw.map(m => getMonthName(m));
             
-            let alltagData = [], freizeitData = [], transportData = [], sonstigesData = [], einmaligData = [];
             let totalSpentData = [], totalIncomeData = [], fixedCostData = [], variableCostData = [], profitData = [];
+            
+            let catDataMap = {};
+            trackerCategories.forEach(cat => {
+                if(cat !== "Lohn" && cat !== "Fixkosten" && cat !== "Sparen" && cat !== "Geschäftsauslagen") catDataMap[cat] = [];
+            });
 
             monthsRaw.forEach(month => {
-                let a = 0, f = 0, t = 0, s = 0, e = 0;
-                let varSpent = 0;
-                let actualMonthIncome = 0; 
-                let actualMonthFixed = 0;
-                
+                for(let c in catDataMap) catDataMap[c].push(0);
+                let monthIdx = catDataMap[Object.keys(catDataMap)[0]].length - 1;
+
+                let varSpent = 0, actualMonthIncome = 0, actualMonthFixed = 0;
                 let entries = trackerData[month] || [];
+                
                 entries.forEach(item => {
-                    let type = item.type || "Ausgabe"; 
-                    let cat = item.cat || "Alltag";
-                    
+                    const type = item.type || "Ausgabe"; const cat = item.cat || "Alltag";
+                    const source = item.sourceAccount || "Privatkonto"; const target = item.targetAccount || "";
                     if (cat === "Geschäftsauslagen") return;
 
-                    if (type === "Ausgabe" || type === "Transfer") {
-                        if (cat === "Fixkosten" || cat === "Sparen") {
-                            actualMonthFixed += item.amount;
-                        } else {
+                    if (type === "Ausgabe" || (type === "Transfer" && source === "Privatkonto" && target !== "Bargeld")) {
+                        if (cat === "Fixkosten" || cat === "Sparen") actualMonthFixed += item.amount;
+                        else {
                             varSpent += item.amount;
-                            if(cat === "Alltag") a += item.amount; if(cat === "Freizeit") f += item.amount;
-                            if(cat === "Transport") t += item.amount; if(cat === "Sonstiges") s += item.amount;
-                            if(cat === "Einmalig") e += item.amount;
+                            if(catDataMap[cat] !== undefined) catDataMap[cat][monthIdx] += item.amount;
                         }
-                    } else if (type === "Einnahme") {
+                    } else if (type === "Einnahme" || (type === "Transfer" && target === "Privatkonto")) {
                         actualMonthIncome += item.amount;
                     }
                 });
                 
-                alltagData.push(a); freizeitData.push(f); transportData.push(t); sonstigesData.push(s); einmaligData.push(e);
                 fixedCostData.push(actualMonthFixed);
                 variableCostData.push(varSpent);
                 totalSpentData.push(actualMonthFixed + varSpent);
@@ -1413,37 +1487,28 @@
                 type: 'bar', data: { labels: monthLabels, datasets: [] },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'top' },
-                        tooltip: { callbacks: { label: function(c) { let l=c.dataset.label||''; if(l)l+=': '; if(c.parsed.y!==null) l+=new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(c.parsed.y); return l; } } }
-                    },
-                    scales: {
-                        x: { stacked: false },
-                        y: { beginAtZero: true, stacked: false, ticks: { callback: function(value) { return value + ' CHF'; } } }
-                    }
+                    plugins: { tooltip: { callbacks: { label: function(c) { let l=c.dataset.label||''; if(l)l+=': '; if(c.parsed.y!==null) l+=new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(c.parsed.y); return l; } } } },
+                    scales: { x: { stacked: false }, y: { beginAtZero: true, stacked: false, ticks: { callback: function(value) { return value + ' CHF'; } } } }
                 }
             };
 
             if (chartType === 'grouped') {
-                chartConfig.data.datasets = [
-                    { label: 'Alltag', data: alltagData, backgroundColor: '#3498DB' },
-                    { label: 'Transport', data: transportData, backgroundColor: '#F1C40F' },
-                    { label: 'Freizeit', data: freizeitData, backgroundColor: '#9B59B6' },
-                    { label: 'Sonstiges', data: sonstigesData, backgroundColor: '#95A5A6' },
-                    { label: 'Einmalig', data: einmaligData, backgroundColor: '#E67E22' }
-                ];
+                let colorIdx = 0;
+                for(let cat in catDataMap) {
+                    chartConfig.data.datasets.push({ label: cat, data: catDataMap[cat], backgroundColor: chartColors[colorIdx % chartColors.length] });
+                    colorIdx++;
+                }
             } else if (chartType === 'total') {
                 chartConfig.data.datasets = [
-                    { label: 'Fixkosten & Sparen (Aus Tracker)', data: fixedCostData, backgroundColor: isDark ? '#2C3E50' : '#34495E' },
-                    { label: 'Variable Ausgaben (Tracker)', data: variableCostData, backgroundColor: '#E74C3C' }
+                    { label: 'Fixkosten & Invest.', data: fixedCostData, backgroundColor: isDark ? '#2C3E50' : '#34495E' },
+                    { label: 'Variable Ausgaben', data: variableCostData, backgroundColor: '#E74C3C' }
                 ];
-                chartConfig.options.scales.x.stacked = true;
-                chartConfig.options.scales.y.stacked = true;
+                chartConfig.options.scales.x.stacked = true; chartConfig.options.scales.y.stacked = true;
             } else if (chartType === 'income-expense') {
                 chartConfig.data.datasets = [
                     { type: 'line', label: 'Netto-Gewinn', data: profitData, borderColor: '#F39C12', backgroundColor: '#F39C12', borderWidth: 3, tension: 0.2 },
-                    { type: 'bar', label: 'Gesamteinnahmen (Inkl. Lohn)', data: totalIncomeData, backgroundColor: '#27AE60' },
-                    { type: 'bar', label: 'Gesamtausgaben (Inkl. Fixkosten)', data: totalSpentData, backgroundColor: '#E74C3C' }
+                    { type: 'bar', label: 'Gesamteinnahmen', data: totalIncomeData, backgroundColor: '#27AE60' },
+                    { type: 'bar', label: 'Gesamtausgaben', data: totalSpentData, backgroundColor: '#E74C3C' }
                 ];
             }
 
@@ -1451,53 +1516,31 @@
             window.myChartInstance = new Chart(ctx, chartConfig);
         }
 
-        function saveStartsaldo() {
-            localStorage.setItem('startsaldo_privat', document.getElementById('startsaldo_privat').value);
-            localStorage.setItem('startsaldo_datum_privat', document.getElementById('startsaldo_datum_privat').value);
-            
-            localStorage.setItem('startsaldo_sparkonto', document.getElementById('startsaldo_sparkonto').value);
-            localStorage.setItem('startsaldo_datum_sparkonto', document.getElementById('startsaldo_datum_sparkonto').value);
-            
-            localStorage.setItem('startsaldo_bargeld', document.getElementById('startsaldo_bargeld').value);
-            localStorage.setItem('startsaldo_datum_bargeld', document.getElementById('startsaldo_datum_bargeld').value);
-            
-            calculateLiveBalances();
-            refreshPortfolioUI();
-        }
-
         function getCalculatedBalances() {
             let startPrivat = parseFloat(localStorage.getItem('startsaldo_privat')) || 0;
             let cutPrivat = localStorage.getItem('startsaldo_datum_privat') || '';
-
             let startSpar = parseFloat(localStorage.getItem('startsaldo_sparkonto')) || 0;
             let cutSpar = localStorage.getItem('startsaldo_datum_sparkonto') || '';
-
             let startBar = parseFloat(localStorage.getItem('startsaldo_bargeld')) || 0;
             let cutBar = localStorage.getItem('startsaldo_datum_bargeld') || '';
 
             let balances = { privat: startPrivat, sparkonto: startSpar, bargeld: startBar };
 
             Object.keys(trackerData).forEach(month => {
-                let entries = trackerData[month] || [];
-                entries.forEach(e => {
+                (trackerData[month] || []).forEach(e => {
                     const source = e.sourceAccount || 'Privatkonto';
                     const target = e.targetAccount || '';
                     const amt = parseFloat(e.amount) || 0;
                     const d = e.date;
 
-                    // Ausgaben / Einnahmen / Transfers vom Quellkonto
                     if (source === 'Privatkonto' && (!cutPrivat || d > cutPrivat)) {
-                        if (e.type === 'Einnahme') balances.privat += amt;
-                        else balances.privat -= amt; 
+                        if (e.type === 'Einnahme') balances.privat += amt; else balances.privat -= amt; 
                     } else if (source === 'Sparkonto' && (!cutSpar || d > cutSpar)) {
-                        if (e.type === 'Einnahme') balances.sparkonto += amt;
-                        else balances.sparkonto -= amt;
+                        if (e.type === 'Einnahme') balances.sparkonto += amt; else balances.sparkonto -= amt;
                     } else if (source === 'Bargeld' && (!cutBar || d > cutBar)) {
-                        if (e.type === 'Einnahme') balances.bargeld += amt;
-                        else balances.bargeld -= amt;
+                        if (e.type === 'Einnahme') balances.bargeld += amt; else balances.bargeld -= amt;
                     }
 
-                    // Geldfluss zum Zielkonto
                     if (e.type === 'Transfer') {
                         if (target === 'Privatkonto' && (!cutPrivat || d > cutPrivat)) balances.privat += amt;
                         else if (target === 'Sparkonto' && (!cutSpar || d > cutSpar)) balances.sparkonto += amt;
@@ -1513,7 +1556,6 @@
             ids.forEach(id => {
                 const startInput = document.getElementById(`startsaldo_${id}`);
                 const dateInput = document.getElementById(`startsaldo_datum_${id}`);
-                
                 if (startInput) startInput.value = localStorage.getItem(`startsaldo_${id}`) || '';
                 if (dateInput) dateInput.value = localStorage.getItem(`startsaldo_datum_${id}`) || getTodayString();
             });
@@ -1526,8 +1568,7 @@
 
         function updateS3aProgress() {
             const currentYear = new Date().getFullYear().toString();
-            const maxCap = 7258.00;
-            let currentPaid = 0;
+            const maxCap = 7258.00; let currentPaid = 0;
 
             const yearEl = document.getElementById('s3a-year-display');
             if (yearEl) yearEl.innerText = currentYear;
@@ -1535,64 +1576,41 @@
             Object.keys(trackerData).forEach(mKey => {
                 if (mKey.startsWith(currentYear)) {
                     (trackerData[mKey] || []).forEach(e => {
-                        const is3aTransfer = (e.type === 'Transfer' && (e.targetAccount === 'Säule 3a' || e.targetAccount.toLowerCase().includes('3a')));
+                        const is3aTransfer = (e.type === 'Transfer' && (e.targetAccount === 'Säule 3a' || (e.targetAccount||'').toLowerCase().includes('3a')));
                         const is3aDesc = (e.desc || '').toLowerCase().includes('3a') || (e.desc || '').toLowerCase().includes('säule');
-                        if (is3aTransfer || (e.cat === 'Sparen' && is3aDesc)) {
-                            currentPaid += (parseFloat(e.amount) || 0);
-                        }
+                        if (is3aTransfer || (e.cat === 'Sparen' && is3aDesc)) currentPaid += (parseFloat(e.amount) || 0);
                     });
                 }
             });
 
             const pct = Math.min(100, Math.round((currentPaid / maxCap) * 100));
-            const fillEl = document.getElementById('s3a-progress-fill');
-            const valEl = document.getElementById('s3a-current-val');
-            const pctEl = document.getElementById('s3a-pct-display');
-
-            if (fillEl) fillEl.style.width = pct + '%';
-            if (valEl) valEl.innerText = currentPaid.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            if (pctEl) pctEl.innerText = pct + '%';
+            if (document.getElementById('s3a-progress-fill')) document.getElementById('s3a-progress-fill').style.width = pct + '%';
+            if (document.getElementById('s3a-current-val')) document.getElementById('s3a-current-val').innerText = currentPaid.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (document.getElementById('s3a-pct-display')) document.getElementById('s3a-pct-display').innerText = pct + '%';
         }
 
         let rawPortfolioData = localStorage.getItem('portfolio_data_v1');
         let portfolioData = rawPortfolioData ? JSON.parse(rawPortfolioData) : [];
         window.portfolioChartInstance = null;
 
-        // Auto-Migration für dynamische Kategorien
-        let needsSave = false;
-        portfolioData = portfolioData.map(item => {
-            if (item.assets) return item; // Schon migriert
-            needsSave = true;
-            let newAssets = {};
-            if (item.sq !== undefined) newAssets["Swissquote"] = item.sq;
-            if (item.btc !== undefined) newAssets["Bitcoin"] = item.btc;
-            if (item.fond !== undefined) newAssets["Sparfond"] = item.fond;
-            if (item.s3a !== undefined) newAssets["Säule 3a"] = item.s3a;
-            
-            return {
-                date: item.date, privat: item.privat, sparkonto: item.sparkonto, bargeld: item.bargeld,
-                assets: newAssets
-            };
-        });
-        if (needsSave) localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData));
-
-        function savePortfolioData() {
-            localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData));
-            updateExportDate();
+        function saveStartsaldo() {
+            localStorage.setItem('startsaldo_privat', document.getElementById('startsaldo_privat').value);
+            localStorage.setItem('startsaldo_datum_privat', document.getElementById('startsaldo_datum_privat').value);
+            localStorage.setItem('startsaldo_sparkonto', document.getElementById('startsaldo_sparkonto').value);
+            localStorage.setItem('startsaldo_datum_sparkonto', document.getElementById('startsaldo_datum_sparkonto').value);
+            localStorage.setItem('startsaldo_bargeld', document.getElementById('startsaldo_bargeld').value);
+            localStorage.setItem('startsaldo_datum_bargeld', document.getElementById('startsaldo_datum_bargeld').value);
+            calculateLiveBalances(); refreshPortfolioUI();
         }
+
+        function savePortfolioData() { localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData)); updateExportDate(); }
 
         function renderPortfolioInputs() {
             const container = document.getElementById('dynamic-portfolio-inputs');
             if(!container) return;
             container.innerHTML = "";
-            
             investCats.forEach(cat => {
-                container.innerHTML += `
-                    <div style="flex: 1; min-width: 130px;">
-                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${cat}</label>
-                        <input type="number" id="port-val-${cat.replace(/\s+/g, '-')}" step="0.01" placeholder="0.00" style="margin-top: 5px;">
-                    </div>
-                `;
+                container.innerHTML += `<div style="flex: 1; min-width: 130px;"><label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">${cat}</label><input type="number" id="port-val-${cat.replace(/\s+/g, '-')}" step="0.01" placeholder="0.00" style="margin-top: 5px;"></div>`;
             });
         }
 
@@ -1603,129 +1621,76 @@
             let currentAssets = {};
             investCats.forEach(cat => {
                 const el = document.getElementById(`port-val-${cat.replace(/\s+/g, '-')}`);
-                currentAssets[cat] = parseFloat(el.value) || 0;
-                el.value = '';
+                currentAssets[cat] = parseFloat(el.value) || 0; el.value = '';
             });
 
             const existingIndex = portfolioData.findIndex(item => item.date === dateVal);
-            if (existingIndex >= 0) {
-                portfolioData[existingIndex] = { 
-                    date: dateVal, 
-                    privat: currentBalances.privat, 
-                    sparkonto: currentBalances.sparkonto, 
-                    bargeld: currentBalances.bargeld, 
-                    assets: currentAssets 
-                };
-            } else {
-                portfolioData.push({ 
-                    date: dateVal, 
-                    privat: currentBalances.privat, 
-                    sparkonto: currentBalances.sparkonto, 
-                    bargeld: currentBalances.bargeld, 
-                    assets: currentAssets 
-                });
-            }
+            if (existingIndex >= 0) portfolioData[existingIndex] = { date: dateVal, privat: currentBalances.privat, sparkonto: currentBalances.sparkonto, bargeld: currentBalances.bargeld, assets: currentAssets };
+            else portfolioData.push({ date: dateVal, privat: currentBalances.privat, sparkonto: currentBalances.sparkonto, bargeld: currentBalances.bargeld, assets: currentAssets });
             
-            savePortfolioData();
-            document.getElementById('port-date').value = getTodayString();
-            refreshPortfolioUI();
+            savePortfolioData(); document.getElementById('port-date').value = getTodayString(); refreshPortfolioUI();
         }
 
         function deletePortfolioRow(index) {
-            if(confirm("Diesen Snapshot wirklich löschen?")) {
-                portfolioData.splice(index, 1);
-                savePortfolioData();
-                refreshPortfolioUI();
-            }
+            if(confirm("Snapshot löschen?")) { portfolioData.splice(index, 1); savePortfolioData(); refreshPortfolioUI(); }
         }
 
         function renderPortfolio() {
             const portDateInput = document.getElementById('port-date');
             if (portDateInput && !portDateInput.value) portDateInput.value = getTodayString();
 
-            const currentBalances = getCalculatedBalances();
-            
-            // Kopfzeile dynamisch bauen
             const thead = document.getElementById("portfolio-table-head");
             let thHtml = `<tr><th style="width: 110px;">Datum</th><th>Privatkonto</th><th>Sparkonto</th><th>Bargeld</th>`;
             investCats.forEach(cat => { thHtml += `<th>${cat}</th>`; });
             thHtml += `<th style="color: var(--success);">Gesamt</th><th>Performance</th><th style="width: 70px;">Aktion</th></tr>`;
             thead.innerHTML = thHtml;
 
-            // Chronologisch sortieren für korrekte Performance-Rechnung (Alt nach Neu)
             let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
-            let enrichedData = [];
-            let firstItem = null;
+            let enrichedData = []; let firstItem = null;
 
-            const calcDiff = (curr, prev) => {
-                return {
-                    diffPrev: curr - prev,
-                    pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0
-                };
-            };
+            const calcDiff = (curr, prev) => ({ diffPrev: curr - prev, pctPrev: prev !== 0 ? ((curr - prev) / prev) * 100 : 0 });
 
             chronologicalData.forEach((item, idx) => {
                 const privatVal = item.privat !== undefined ? item.privat : 0;
                 const sparkontoVal = item.sparkonto !== undefined ? item.sparkonto : 0;
                 const bargeldVal = item.bargeld !== undefined ? item.bargeld : 0;
-                
-                let assetsSum = 0;
-                let currentAssets = item.assets || {};
+                let assetsSum = 0; let currentAssets = item.assets || {};
                 Object.values(currentAssets).forEach(v => assetsSum += v);
-                
                 const total = privatVal + sparkontoVal + bargeldVal + assetsSum;
 
                 if (idx === 0) firstItem = { total, privat: privatVal, sparkonto: sparkontoVal, bargeld: bargeldVal, assets: currentAssets };
-
                 let prevItem = idx > 0 ? enrichedData[idx-1] : firstItem;
                 let prevAssets = prevItem.assets || {};
 
                 let perfAssets = {};
-                investCats.forEach(cat => {
-                    let cVal = currentAssets[cat] || 0;
-                    let pVal = prevAssets[cat] || 0;
-                    perfAssets[cat] = calcDiff(cVal, pVal);
-                });
+                investCats.forEach(cat => { perfAssets[cat] = calcDiff(currentAssets[cat] || 0, prevAssets[cat] || 0); });
 
                 enrichedData.push({
                     ...item, total, privatVal, sparkontoVal, bargeldVal, assetsSum, currentAssets, perfAssets,
-                    perfTotal: calcDiff(total, prevItem.total),
-                    perfTotalStart: calcDiff(total, firstItem.total),
-                    perfPrivat: calcDiff(privatVal, prevItem.privat),
-                    perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto),
-                    perfBargeld: calcDiff(bargeldVal, prevItem.bargeld),
-                    originalIndex: portfolioData.findIndex(p => p.date === item.date)
+                    perfTotal: calcDiff(total, prevItem.total), perfTotalStart: calcDiff(total, firstItem.total),
+                    perfPrivat: calcDiff(privatVal, prevItem.privat), perfSparkonto: calcDiff(sparkontoVal, prevItem.sparkonto),
+                    perfBargeld: calcDiff(bargeldVal, prevItem.bargeld), originalIndex: portfolioData.findIndex(p => p.date === item.date)
                 });
             });
 
-            // Umdrehen für die Anzeige in der Tabelle (Neu nach Alt)
             enrichedData.reverse();
+            const tbody = document.getElementById("portfolio-body"); tbody.innerHTML = "";
 
-            const tbody = document.getElementById("portfolio-body");
-            tbody.innerHTML = "";
-
-            const formatFullPerf = (perfPrev, perfStart) => {
-                let html = '';
-                if(perfPrev.diffPrev !== 0) {
-                    let colorPrev = perfPrev.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
-                    let signPrev = perfPrev.diffPrev > 0 ? '+' : '';
-                    html += `<div style="color: ${colorPrev}; font-size: 11px; margin-bottom: 4px;">Letzter: ${signPrev}${formatCHF(perfPrev.diffPrev)}<br>(${signPrev}${perfPrev.pctPrev.toFixed(1)}%)</div>`;
-                }
-                if(perfStart.diffPrev !== 0) {
-                    let colorStart = perfStart.diffPrev > 0 ? 'var(--success)' : '#E74C3C';
-                    let signStart = perfStart.diffPrev > 0 ? '+' : '';
-                    html += `<div style="color: ${colorStart}; font-size: 11px;">Start: ${signStart}${formatCHF(perfStart.diffPrev)}<br>(${signStart}${perfStart.pctPrev.toFixed(1)}%)</div>`;
-                }
-                if(html === '') return '<span style="color: var(--text-muted); font-size: 11px;">-</span>';
-                return html;
-            };
-            
             enrichedData.forEach((item) => {
                 let dynamicTdHtml = '';
                 investCats.forEach(cat => {
-                    let val = item.currentAssets[cat] || 0;
-                    dynamicTdHtml += `<td data-label="${cat}"><div>${formatCHF(val)}</div>${formatInlinePerf(item.perfAssets[cat])}</td>`;
+                    dynamicTdHtml += `<td data-label="${cat}"><div>${formatCHF(item.currentAssets[cat] || 0)}</div>${formatInlinePerf(item.perfAssets[cat])}</td>`;
                 });
+
+                let perfHtml = '';
+                if(item.perfTotal.diffPrev !== 0) {
+                    let c = item.perfTotal.diffPrev > 0 ? 'var(--success)' : '#E74C3C'; let s = item.perfTotal.diffPrev > 0 ? '+' : '';
+                    perfHtml += `<div style="color: ${c}; font-size: 11px; margin-bottom: 4px;">Letzter: ${s}${formatCHF(item.perfTotal.diffPrev)} (${s}${item.perfTotal.pctPrev.toFixed(1)}%)</div>`;
+                }
+                if(item.perfTotalStart.diffPrev !== 0) {
+                    let c = item.perfTotalStart.diffPrev > 0 ? 'var(--success)' : '#E74C3C'; let s = item.perfTotalStart.diffPrev > 0 ? '+' : '';
+                    perfHtml += `<div style="color: ${c}; font-size: 11px;">Start: ${s}${formatCHF(item.perfTotalStart.diffPrev)} (${s}${item.perfTotalStart.pctPrev.toFixed(1)}%)</div>`;
+                }
 
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
@@ -1734,27 +1699,18 @@
                     <td data-label="Sparkonto"><div>${formatCHF(item.sparkontoVal)}</div>${formatInlinePerf(item.perfSparkonto)}</td>
                     <td data-label="Bargeld"><div>${formatCHF(item.bargeldVal)}</div>${formatInlinePerf(item.perfBargeld)}</td>
                     ${dynamicTdHtml}
-                    <td data-label="Gesamt" style="font-weight: bold; font-size: 15px;">
-                        <div style="color: var(--success);">${formatCHF(item.total)}</div>
-                    </td>
-                    <td data-label="Performance" style="min-width: 130px;">
-                        ${formatFullPerf(item.perfTotal, item.perfTotalStart)}
-                    </td>
+                    <td data-label="Gesamt" style="font-weight: bold; font-size: 15px;"><div style="color: var(--success);">${formatCHF(item.total)}</div></td>
+                    <td data-label="Performance" style="min-width: 130px;">${perfHtml || '<span style="color: var(--text-muted);">-</span>'}</td>
                     <td data-label="Aktion"><button class="btn btn-danger" onclick="deletePortfolioRow(${item.originalIndex})" style="width: 100%; padding: 6px;">X</button></td>
                 `;
                 tbody.appendChild(tr);
             });
             
-            // Übersichtskarten updaten (Live Liquide Mittel + Letzte Investitionen)
+            const currentBalances = getCalculatedBalances();
             let liquid = currentBalances.privat + currentBalances.sparkonto + currentBalances.bargeld;
-            let invest = 0;
-            if (enrichedData.length > 0) {
-                const latest = enrichedData[0]; 
-                invest = latest.assetsSum; // Nimmt automatisch alle existierenden Investments zusammen
-            }
-            let netWorth = liquid + invest;
+            let invest = enrichedData.length > 0 ? enrichedData[0].assetsSum : 0;
             
-            document.getElementById('port-total').innerText = formatCHF(netWorth);
+            document.getElementById('port-total').innerText = formatCHF(liquid + invest);
             document.getElementById('port-liquid').innerText = formatCHF(liquid);
             document.getElementById('port-invest').innerText = formatCHF(invest);
         }
@@ -1764,28 +1720,24 @@
             const isDark = document.body.classList.contains('dark-mode');
             const filterVal = document.getElementById('portfolio-chart-filter') ? document.getElementById('portfolio-chart-filter').value : 'all';
             
-            Chart.defaults.color = isDark ? '#A0A0A0' : '#7F8C8D';
-            Chart.defaults.borderColor = isDark ? '#333333' : '#E0E6ED';
+            Chart.defaults.color = isDark ? '#A0A0A0' : '#7F8C8D'; Chart.defaults.borderColor = isDark ? '#333333' : '#E0E6ED';
 
             let chronologicalData = [...portfolioData].sort((a, b) => new Date(a.date) - new Date(b.date));
             const labels = chronologicalData.map(item => new Date(item.date).toLocaleDateString('de-CH'));
             
-            const privatData = chronologicalData.map(item => item.privat !== undefined ? item.privat : 0);
-            const sparkontoData = chronologicalData.map(item => item.sparkonto !== undefined ? item.sparkonto : 0);
-            const bargeldData = chronologicalData.map(item => item.bargeld !== undefined ? item.bargeld : 0);
+            const privatData = chronologicalData.map(item => item.privat || 0);
+            const sparkontoData = chronologicalData.map(item => item.sparkonto || 0);
+            const bargeldData = chronologicalData.map(item => item.bargeld || 0);
             
-            // Dynamische Datasets vorbereiten
             let dynamicDatasets = [];
             investCats.forEach((cat, index) => {
                 let color = chartColors[index % chartColors.length];
-                let data = chronologicalData.map(item => (item.assets && item.assets[cat]) ? item.assets[cat] : 0);
-                dynamicDatasets.push({ label: cat, data: data, borderColor: color, backgroundColor: color, borderWidth: 2, tension: 0.3, order: 5 + index });
+                dynamicDatasets.push({ label: cat, data: chronologicalData.map(i => (i.assets && i.assets[cat]) ? i.assets[cat] : 0), borderColor: color, backgroundColor: color, borderWidth: 2, tension: 0.3, order: 5 + index });
             });
 
             const totalData = chronologicalData.map((item, idx) => {
                 let sum = privatData[idx] + sparkontoData[idx] + bargeldData[idx];
-                if(item.assets) Object.values(item.assets).forEach(v => sum += v);
-                return sum;
+                if(item.assets) Object.values(item.assets).forEach(v => sum += v); return sum;
             });
 
             const datasetTotal = { label: 'Gesamtvermögen', data: totalData, borderColor: '#27AE60', backgroundColor: 'rgba(39, 174, 96, 0.12)', borderWidth: 4, tension: 0.3, fill: true, order: 1 };
@@ -1799,32 +1751,13 @@
             else if (filterVal === 'liquid') chartDatasets = [datasetPrivat, datasetSpar, datasetBar];
             else if (filterVal === 'invest') chartDatasets = [...dynamicDatasets];
 
-            let chartConfig = {
-                type: 'line',
-                data: { labels: labels, datasets: chartDatasets },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { 
-                        legend: { position: 'top' },
-                        tooltip: { callbacks: { label: function(c) { let l=c.dataset.label||''; if(l)l+=': '; if(c.parsed.y!==null) l+=new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(c.parsed.y); return l; } } }
-                    },
-                    scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value + ' CHF'; } } } }
-                }
-            };
-
             if (window.portfolioChartInstance) window.portfolioChartInstance.destroy();
-            window.portfolioChartInstance = new Chart(ctx, chartConfig);
+            window.portfolioChartInstance = new Chart(ctx, { type: 'line', data: { labels: labels, datasets: chartDatasets }, options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(c) { let l=c.dataset.label||''; if(l)l+=': '; if(c.parsed.y!==null) l+=new Intl.NumberFormat('de-CH',{style:'currency',currency:'CHF'}).format(c.parsed.y); return l; } } } }, scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value + ' CHF'; } } } } } });
         }
 
         window.onload = function() {
-            checkBackupStatus();
-            loadBudgetData(); 
-            renderTracker();
-            calculateLiveBalances();
-            renderPortfolioInputs();
-            renderPortfolio();
-            updateS3aProgress();
+            checkBackupStatus(); loadBudgetData(); updateTrackerFilters(); renderTracker();
+            calculateLiveBalances(); renderPortfolioInputs(); renderPortfolio(); updateS3aProgress();
         };
     </script>
 </body>
