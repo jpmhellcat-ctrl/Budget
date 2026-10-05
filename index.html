@@ -368,7 +368,7 @@
                 </div>
             </div>
 
-            <div class="table-container">
+            <div class="table-container" style="margin-bottom: 25px;">
                 <table id="budget-table">
                     <thead>
                         <tr>
@@ -394,6 +394,15 @@
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+
+            <!-- REALITÄTS-CHECK -->
+            <div class="extra-box">
+                <h4>🔍 Realitäts-Check: Dein echter Durchschnitt pro Monat</h4>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Diese Werte berechnen sich live aus allen Monaten deines Ausgaben-Trackers. Vergleiche sie mit deinem Budget-Plan oben!</p>
+                <div id="budget-reality-container" class="cat-grid">
+                    <!-- Wird via JS dynamisch gefüllt -->
+                </div>
             </div>
         </div>
 
@@ -470,7 +479,7 @@
         
         <!-- STATS TAB -->
         <div id="tab-stats" class="tab-content">
-            <!-- NEW YEARLY DASHBOARD -->
+            <!-- JAHRES-DASHBOARD -->
             <div class="summary-cards" style="margin-bottom: 25px;">
                 <div class="card income">
                     <h3>Gesamteinnahmen (Jahr)</h3>
@@ -489,6 +498,7 @@
                 </div>
             </div>
 
+            <!-- TOP 5 LISTEN -->
             <div class="tracker-extras" style="margin-bottom: 30px;">
                 <div class="extra-box">
                     <h4>📉 Top 5 grösste Ausgaben</h4>
@@ -499,13 +509,15 @@
                     <ul id="stat-top-incomes" class="cat-list"></ul>
                 </div>
             </div>
-            <!-- END NEW DASHBOARD -->
 
-            <!-- NEU: Jahresweite Suche & Kategorien-Editor -->
+            <!-- JAHRESWEITE SUCHE & MASSEN-EDITOR -->
             <div class="extra-box" style="margin-bottom: 30px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 15px; gap: 10px;">
                     <h4 style="margin: 0;">🔍 Jahresweite Suche & Massen-Editor</h4>
-                    <input type="text" id="yearly-search-input" placeholder="Nach Text oder Kategorie suchen..." oninput="searchYearlyTransactions()" style="max-width: 300px; margin: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text);">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <span id="yearly-search-total" style="font-weight: bold; font-size: 15px; background: var(--card-bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); display: none;"></span>
+                        <input type="text" id="yearly-search-input" placeholder="Nach Text oder Kategorie suchen..." oninput="searchYearlyTransactions()" style="max-width: 300px; margin: 0; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg); color: var(--text);">
+                    </div>
                 </div>
                 <div class="table-container" id="yearly-search-results-container" style="display: none; max-height: 400px; overflow-y: auto; margin-bottom: 0;">
                     <table id="yearly-search-table">
@@ -553,6 +565,12 @@
                     <div class="value" id="port-invest">0.00 CHF</div>
                     <div class="sub-value">Summe der eigenen Anlage-Kategorien.</div>
                 </div>
+                <!-- REINE RENDITE CARD -->
+                <div class="card" id="port-rendite-card">
+                    <h3>📈 Reine Rendite (Gewinn)</h3>
+                    <div class="value" id="port-rendite">0.00 CHF</div>
+                    <div class="sub-value">Seit Start des Trackers.</div>
+                </div>
             </div>
 
             <!-- Säule 3a Jahres-Fortschrittsbalken -->
@@ -596,6 +614,26 @@
                     <label style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 8px;">Gültig ab Stichtag</label>
                     <input type="date" id="startsaldo_datum_bargeld" onchange="saveStartsaldo()" style="margin-top: 4px; padding: 8px;">
                     <div style="font-size: 24px; font-weight: bold; margin-top: 15px; color: #F39C12;"><span id="calc_bargeld">0.00</span> CHF</div>
+                </div>
+            </div>
+
+            <!-- WUNSCHLISTE & ZIELE -->
+            <div class="extra-box" style="margin-bottom: 25px;">
+                <h4 style="margin-top: 0;">🎯 Wunschliste & Finanz-Ziele</h4>
+                <p style="font-size: 12px; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Lass deine Gewinne (Rendite) für dich bezahlen oder tracke, wann du genug Liquidität für einen Wunsch hast.</p>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <input type="text" id="wish-name" placeholder="Z.B. Fahrwerk, Helvetia Verlust aufholen..." style="flex: 2; min-width: 150px;">
+                    <input type="number" id="wish-amount" placeholder="Ziel-Betrag" style="flex: 1; min-width: 100px;">
+                    <select id="wish-type" style="flex: 2; min-width: 180px;">
+                        <option value="rendite">Finanziert durch: 📈 Reine Rendite (Anlagegewinne)</option>
+                        <option value="liquid">Finanziert durch: 💵 Liquide Mittel (Cash)</option>
+                    </select>
+                    <button class="btn" onclick="addWishlist()" style="background-color: var(--success);">Hinzufügen</button>
+                </div>
+                
+                <div id="wishlist-grid" class="live-boxes-grid" style="gap: 15px; margin-bottom: 0;">
+                    <!-- Wird dynamisch gefüllt -->
                 </div>
             </div>
 
@@ -656,12 +694,12 @@
             return `${year}-${month}-${day}`;
         }
 
-        // --- NEUE LOGIK: 25. bis 24. Lohnzyklus ---
+        // NEU: 25. bis 24. Lohnzyklus
         function getCycleMonth(dateString) {
             if (!dateString) return "";
             const d = new Date(dateString);
             let year = d.getFullYear();
-            let month = d.getMonth() + 1;
+            let month = d.getMonth() + 1; // 1-12
             let day = d.getDate();
             
             // Wenn Tag >= 25, gehört es zum FOLGEMONAT.
@@ -680,16 +718,32 @@
         let budgetSortField = null;
         let budgetSortAsc = true;
         
+        let currentLiquidGlobal = 0;
+        let currentRenditeGlobal = 0;
+
         // Settings / Config Data
         const defaultInvestCats = ["Swissquote", "Bitcoin", "Sparfond", "Säule 3a"];
         let investCats = JSON.parse(localStorage.getItem('invest_cats_v1')) || defaultInvestCats;
 
-        const defaultTrackerCategories = ["Lohn", "Alltag", "Freizeit", "Transport", "Sonstiges", "Einmalig", "Geschäftsauslagen", "Fixkosten", "Sparen", "Bargeld"];
-        let trackerCategories = JSON.parse(localStorage.getItem('tracker_cats_v1')) || defaultTrackerCategories;
+        const baseTrackerCategories = ["Lohn", "Alltag", "Freizeit", "Transport", "Sonstiges", "Einmalig", "Geschäftsauslagen", "Fixkosten", "Sparen", "Bargeld", "Steuer", "Geschenke", "Auto kauf"];
+        let trackerCategories = JSON.parse(localStorage.getItem('tracker_cats_v1')) || baseTrackerCategories;
+
+        // Auto-Hinzufügen von neuen Empfehlungen, ohne bestehende zu überschreiben
+        const newRecommendedCats = ["Steuern & Abgaben", "Abos & Software", "Vorschüsse & Familie", "Online Shopping", "Gesundheit & Pflege", "Haushalt & Wohnen"];
+        let updatedCats = false;
+        newRecommendedCats.forEach(c => {
+            if(!trackerCategories.includes(c)) {
+                trackerCategories.push(c);
+                updatedCats = true;
+            }
+        });
+        if(updatedCats) localStorage.setItem('tracker_cats_v1', JSON.stringify(trackerCategories));
 
         const baseAccounts = ["Privatkonto", "Sparkonto", "Bargeld"];
 
         const chartColors = ['#3498DB', '#E67E22', '#9B59B6', '#7F8C8D', '#1ABC9C', '#D35400', '#E74C3C', '#34495E', '#F1C40F'];
+
+        let wishlistData = JSON.parse(localStorage.getItem('wishlist_v1')) || [];
 
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
@@ -853,7 +907,7 @@
                 updateTrackerFilters();
                 renderTracker(); 
             }
-            else if (tabId === 'stats') updateChart();
+            else if (tabId === 'stats') { updateChart(); searchYearlyTransactions(); }
             else if (tabId === 'portfolio') { 
                 calculateLiveBalances(); 
                 refreshPortfolioUI();
@@ -969,13 +1023,57 @@
             document.getElementById("sum-invest").innerText = formatCHF(inv);
             document.getElementById("sum-fixed").innerText = formatCHF(fix);
             document.getElementById("sum-variable").innerText = formatCHF(varb + sack);
+            
+            // Aufruf des Realitätschecks
+            renderBudgetRealityCheck();
+        }
+
+        function renderBudgetRealityCheck() {
+            let months = Object.keys(trackerData);
+            let monthCount = months.length || 1;
+            let catSums = {};
+            trackerCategories.forEach(c => catSums[c] = 0);
+
+            months.forEach(m => {
+                (trackerData[m] || []).forEach(tx => {
+                    let amt = parseFloat(tx.amount) || 0;
+                    if (tx.type === 'Ausgabe') {
+                         if(catSums[tx.cat] !== undefined) catSums[tx.cat] += amt;
+                    } else if (tx.type === 'Transfer' && tx.sourceAccount === 'Privatkonto' && tx.targetAccount !== 'Bargeld') {
+                         if(catSums[tx.cat] !== undefined) catSums[tx.cat] += amt;
+                    }
+                });
+            });
+
+            const container = document.getElementById('budget-reality-container');
+            if (!container) return;
+            
+            let html = '';
+            trackerCategories.forEach(cat => {
+                // Diese blenden wir aus, da sie im Budget-Planer anders behandelt werden
+                if (cat === "Geschäftsauslagen" || cat === "Lohn" || cat === "Bargeld") return;
+                let avg = catSums[cat] / monthCount;
+                if(avg > 0) {
+                     let color = "var(--accent)";
+                     if(cat === "Fixkosten" || cat === "Sparen") color = "#34495E";
+                     if(cat === "Freizeit") color = "#9B59B6";
+                     if(cat === "Transport") color = "#F1C40F";
+                     if(cat === "Einmalig") color = "#E67E22";
+                     
+                     html += `<div class="cat-item" style="border-left-color: ${color}">
+                        <div class="cat-name">${cat} (Ø / Monat)</div>
+                        <div class="cat-sum" style="color: var(--text)">${formatCHF(avg)}</div>
+                     </div>`;
+                }
+            });
+            if (html === '') html = '<p style="color: var(--text-muted); font-size: 14px;">Noch keine Ausgaben-Daten vorhanden.</p>';
+            container.innerHTML = html;
         }
 
         let rawTrackerData = localStorage.getItem('tracker_data_v4');
         let trackerData = rawTrackerData ? JSON.parse(rawTrackerData) : {};
         
-        // Initialer Monat basierend auf dem heutigen Datum und der 25. Regel
-        let currentMonthKey = getCycleMonth(getTodayString());
+        let currentMonthKey = getCycleMonth(getTodayString()); // Nutzt die 25. Logik für Start!
         
         function getMonthName(dateString) {
             if(!dateString) return "";
@@ -995,7 +1093,8 @@
         }
         function saveTrackerData() {
             localStorage.setItem('tracker_data_v4', JSON.stringify(trackerData));
-            if (document.getElementById('tab-stats').classList.contains('active')) updateChart();
+            if (document.getElementById('tab-stats').classList.contains('active')) { updateChart(); searchYearlyTransactions(); }
+            if (document.getElementById('tab-budget').classList.contains('active')) renderBudgetRealityCheck();
             calculateLiveBalances();
             updateS3aProgress();
             if (document.getElementById('tab-portfolio').classList.contains('active')) {
@@ -1058,12 +1157,13 @@
                 let newCycle = getCycleMonth(value);
                 trackerData[oldCycle][index].date = value;
                 
+                // Falls Datum in neuen Zyklus fällt, verschiebe den Eintrag!
                 if (oldCycle !== newCycle) {
                     let itemToMove = trackerData[oldCycle].splice(index, 1)[0];
                     if (!trackerData[newCycle]) trackerData[newCycle] = [];
                     trackerData[newCycle].push(itemToMove);
                     saveTrackerData();
-                    currentMonthKey = newCycle; 
+                    currentMonthKey = newCycle; // Springe direkt zum neuen Monat, damit der User den Eintrag sieht
                     renderTracker();
                     alert(`Datum geändert: Die Buchung ist in den Zyklus ${getMonthName(newCycle)} gesprungen (Lohn-Regel: 25. bis 24.).`);
                     return;
@@ -1106,6 +1206,7 @@
                 });
                 trackerData[month] = uniqueEntries;
 
+                // Fuzzy Search für den manuellen Modal-Check
                 let grouped = {};
                 trackerData[month].forEach((item, index) => {
                     let key = `${item.date}_${item.type}_${item.amount}`;
@@ -1186,6 +1287,108 @@
                     }
                 }
             } catch(e) { console.error(e); }
+        }
+
+        function searchYearlyTransactions() {
+            const searchInput = document.getElementById('yearly-search-input');
+            const container = document.getElementById('yearly-search-results-container');
+            const tbody = document.getElementById('yearly-search-body');
+            const totalSpan = document.getElementById('yearly-search-total');
+            const term = searchInput.value.trim().toLowerCase();
+
+            if (term === '') {
+                container.style.display = 'none';
+                if (totalSpan) totalSpan.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            if (totalSpan) totalSpan.style.display = 'block';
+            tbody.innerHTML = '';
+
+            let results = [];
+            let filteredSum = 0;
+
+            for (let month in trackerData) {
+                (trackerData[month] || []).forEach((tx, index) => {
+                    const descMatches = (tx.desc || '').toLowerCase().includes(term);
+                    const catMatches = (tx.cat || '').toLowerCase().includes(term);
+                    if (descMatches || catMatches) {
+                        results.push({ month, index, tx });
+                        
+                        // Summe berechnen
+                        let amt = parseFloat(tx.amount) || 0;
+                        if (tx.type === 'Ausgabe') {
+                            filteredSum -= amt;
+                        } else if (tx.type === 'Einnahme') {
+                            filteredSum += amt;
+                        } else if (tx.type === 'Transfer') {
+                            if (tx.sourceAccount === 'Privatkonto') filteredSum -= amt;
+                            else if (tx.targetAccount === 'Privatkonto') filteredSum += amt;
+                            else filteredSum -= amt; 
+                        }
+                    }
+                });
+            }
+
+            if (totalSpan) {
+                let isIncome = filteredSum > 0;
+                let color = isIncome ? 'var(--success)' : '#E74C3C';
+                let sign = isIncome ? '+' : '';
+                if (filteredSum === 0) { color = 'var(--text)'; sign = ''; }
+                totalSpan.innerHTML = `Total: <span style="color: ${color}">${sign}${formatCHF(Math.abs(filteredSum))}</span>`;
+            }
+
+            results.sort((a, b) => new Date(b.tx.date) - new Date(a.tx.date));
+
+            if (results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Keine Einträge gefunden.</td></tr>';
+                if (totalSpan) totalSpan.innerHTML = `Total: <span style="color: var(--text)">0.00 CHF</span>`;
+                return;
+            }
+
+            results.forEach(res => {
+                const item = res.tx;
+                let dateStr = new Date(item.date).toLocaleDateString('de-CH');
+                let colorClass = item.type === 'Einnahme' ? 'text-success' : (item.type === 'Transfer' ? 'amount-transfer' : 'text-danger');
+                let sign = item.type === 'Einnahme' ? '+' : (item.type === 'Transfer' ? '⇄' : '-');
+
+                let selectHtml = `<select onchange="updateYearlyCategory('${res.month}', ${res.index}, this.value, event)" style="padding: 6px; font-size: 13px; margin: 0; width: 100%; font-weight: bold; background-color: var(--card-bg); color: var(--text); border: 1px solid var(--border); transition: background-color 0.3s;">`;
+                trackerCategories.forEach(c => {
+                    selectHtml += `<option value="${c}" ${c === item.cat ? 'selected' : ''}>${c}</option>`;
+                });
+                selectHtml += `</select>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Datum">${dateStr}</td>
+                    <td data-label="Zyklus"><span style="background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--text-muted);">${getMonthName(res.month)}</span></td>
+                    <td data-label="Beschreibung" style="font-weight: bold;">${item.desc || '-'}</td>
+                    <td data-label="Betrag" class="${colorClass}" style="font-weight: bold; white-space: nowrap;">${sign} ${formatCHF(item.amount)}</td>
+                    <td data-label="Kategorie anpassen">${selectHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateYearlyCategory(month, index, newCat, event) {
+            if (trackerData[month] && trackerData[month][index]) {
+                trackerData[month][index].cat = newCat;
+                saveTrackerData(); // speichert und triggert updateChart etc.
+                
+                // Visuelles Feedback
+                const selectElement = event.target;
+                const originalBg = selectElement.style.backgroundColor;
+                const originalColor = selectElement.style.color;
+                
+                selectElement.style.backgroundColor = 'var(--success)';
+                selectElement.style.color = 'white';
+                
+                setTimeout(() => {
+                    selectElement.style.backgroundColor = originalBg;
+                    selectElement.style.color = originalColor;
+                }, 800);
+            }
         }
 
         function sortTracker(field) {
@@ -1378,6 +1581,7 @@
                     if(cat === "Transport") color = "#F1C40F";
                     if(cat === "Einmalig") color = "#E67E22";
                     if(cat === "Bargeld") color = "#16A085";
+                    if(cat === "Online Shopping") color = "#8E44AD"; // Neue Farbe
                     
                     htmlStr += `<div class="cat-item" style="border-left-color: ${color}"><div class="cat-name">${cat}</div><div class="cat-sum">${formatCHF(val)}</div></div>`;
                 });
@@ -1420,6 +1624,7 @@
                 portfolio_data_v1: localStorage.getItem('portfolio_data_v1'),
                 invest_cats_v1: localStorage.getItem('invest_cats_v1'),
                 tracker_cats_v1: localStorage.getItem('tracker_cats_v1'),
+                wishlist_v1: localStorage.getItem('wishlist_v1'),
                 startsaldo_privat: localStorage.getItem('startsaldo_privat'),
                 startsaldo_datum_privat: localStorage.getItem('startsaldo_datum_privat'),
                 startsaldo_sparkonto: localStorage.getItem('startsaldo_sparkonto'),
@@ -1445,6 +1650,7 @@
                     if (data.portfolio_data_v1) localStorage.setItem('portfolio_data_v1', data.portfolio_data_v1);
                     if (data.invest_cats_v1) localStorage.setItem('invest_cats_v1', data.invest_cats_v1);
                     if (data.tracker_cats_v1) localStorage.setItem('tracker_cats_v1', data.tracker_cats_v1);
+                    if (data.wishlist_v1) localStorage.setItem('wishlist_v1', data.wishlist_v1);
                     
                     if (data.startsaldo_privat) localStorage.setItem('startsaldo_privat', data.startsaldo_privat);
                     if (data.startsaldo_datum_privat) localStorage.setItem('startsaldo_datum_privat', data.startsaldo_datum_privat);
@@ -1456,7 +1662,7 @@
                     if (data.last_export_date_v4) localStorage.setItem('last_export_date_v4', data.last_export_date_v4);
                     
                     alert("✅ Backup geladen!"); location.reload();
-                } catch (err) { alert("❌ Fehler beim Lesen der Datei. Sie ist beschädigt oder unvollständig."); }
+                } catch (err) { alert("❌ Fehler beim Lesen der Datei."); }
             };
             reader.readAsText(file); event.target.value = ''; 
         }
@@ -1469,7 +1675,6 @@
                     let mergedCount = 0; 
                     let mergedPortCount = 0;
                     
-                    // 1. Tracker Daten mergen (mit Duplikat-Schutz)
                     let newTracker = null;
                     if (data.tracker_data_v4) newTracker = typeof data.tracker_data_v4 === 'string' ? JSON.parse(data.tracker_data_v4) : data.tracker_data_v4;
                     else if (Object.keys(data).some(k => k.match(/^\d{4}-\d{2}$/))) newTracker = data;
@@ -1493,7 +1698,6 @@
                         saveTrackerData();
                     }
                     
-                    // 2. Portfolio Daten mergen
                     let newPortfolio = null;
                     if (data.portfolio_data_v1) newPortfolio = typeof data.portfolio_data_v1 === 'string' ? JSON.parse(data.portfolio_data_v1) : data.portfolio_data_v1;
                     
@@ -1510,7 +1714,6 @@
                         savePortfolioData();
                     }
                     
-                    // 3. Neue Kategorien übernehmen
                     if (data.invest_cats_v1) {
                         let incomingInvCats = typeof data.invest_cats_v1 === 'string' ? JSON.parse(data.invest_cats_v1) : data.invest_cats_v1;
                         incomingInvCats.forEach(c => { if(!investCats.includes(c)) investCats.push(c); });
@@ -1520,6 +1723,14 @@
                         let incomingTrkCats = typeof data.tracker_cats_v1 === 'string' ? JSON.parse(data.tracker_cats_v1) : data.tracker_cats_v1;
                         incomingTrkCats.forEach(c => { if(!trackerCategories.includes(c)) trackerCategories.push(c); });
                         localStorage.setItem('tracker_cats_v1', JSON.stringify(trackerCategories));
+                    }
+                    if (data.wishlist_v1) {
+                        let incWish = typeof data.wishlist_v1 === 'string' ? JSON.parse(data.wishlist_v1) : data.wishlist_v1;
+                        incWish.forEach(w => { 
+                            let exists = wishlistData.some(e => e.name === w.name && e.amount === w.amount);
+                            if(!exists) wishlistData.push(w); 
+                        });
+                        saveWishlist();
                     }
 
                     if (mergedCount > 0 || mergedPortCount > 0) {
@@ -1531,86 +1742,6 @@
                 } catch (err) { alert("❌ Formatierungsfehler in der Datei."); }
             };
             reader.readAsText(file); event.target.value = ''; 
-        }
-
-        function searchYearlyTransactions() {
-            const searchInput = document.getElementById('yearly-search-input');
-            const container = document.getElementById('yearly-search-results-container');
-            const tbody = document.getElementById('yearly-search-body');
-            const term = searchInput.value.trim().toLowerCase();
-
-            if (term === '') {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            tbody.innerHTML = '';
-
-            let results = [];
-
-            // Gesamtes Jahr nach dem Suchbegriff durchkämmen
-            for (let month in trackerData) {
-                (trackerData[month] || []).forEach((tx, index) => {
-                    const descMatches = (tx.desc || '').toLowerCase().includes(term);
-                    const catMatches = (tx.cat || '').toLowerCase().includes(term);
-                    if (descMatches || catMatches) {
-                        results.push({ month, index, tx });
-                    }
-                });
-            }
-
-            // Nach Datum absteigend sortieren (Neueste zuerst)
-            results.sort((a, b) => new Date(b.tx.date) - new Date(a.tx.date));
-
-            if (results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">Keine Einträge gefunden.</td></tr>';
-                return;
-            }
-
-            results.forEach(res => {
-                const item = res.tx;
-                let dateStr = new Date(item.date).toLocaleDateString('de-CH');
-                let colorClass = item.type === 'Einnahme' ? 'text-success' : (item.type === 'Transfer' ? 'amount-transfer' : 'text-danger');
-                let sign = item.type === 'Einnahme' ? '+' : (item.type === 'Transfer' ? '⇄' : '-');
-
-                // Dynamisches Kategorie-Dropdown für diesen Eintrag
-                let selectHtml = `<select onchange="updateYearlyCategory('${res.month}', ${res.index}, this.value, event)" style="padding: 6px; font-size: 13px; margin: 0; width: 100%; font-weight: bold; background-color: var(--card-bg); color: var(--text); border: 1px solid var(--border); transition: background-color 0.3s;">`;
-                trackerCategories.forEach(c => {
-                    selectHtml += `<option value="${c}" ${c === item.cat ? 'selected' : ''}>${c}</option>`;
-                });
-                selectHtml += `</select>`;
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td data-label="Datum">${dateStr}</td>
-                    <td data-label="Zyklus"><span style="background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 11px; color: var(--text-muted);">${getMonthName(res.month)}</span></td>
-                    <td data-label="Beschreibung" style="font-weight: bold;">${item.desc || '-'}</td>
-                    <td data-label="Betrag" class="${colorClass}" style="font-weight: bold; white-space: nowrap;">${sign} ${formatCHF(item.amount)}</td>
-                    <td data-label="Kategorie anpassen">${selectHtml}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function updateYearlyCategory(month, index, newCat, event) {
-            if (trackerData[month] && trackerData[month][index]) {
-                trackerData[month][index].cat = newCat;
-                saveTrackerData(); // Dies speichert die Daten und aktualisiert automatisch Dashboards & Charts
-                
-                // Visuelles Feedback: Feld leuchtet kurz grün auf
-                const selectElement = event.target;
-                const originalBg = selectElement.style.backgroundColor;
-                const originalColor = selectElement.style.color;
-                
-                selectElement.style.backgroundColor = 'var(--success)';
-                selectElement.style.color = 'white';
-                
-                setTimeout(() => {
-                    selectElement.style.backgroundColor = originalBg;
-                    selectElement.style.color = originalColor;
-                }, 800);
-            }
         }
 
         function updateYearlyStats() {
@@ -1625,7 +1756,7 @@
                     const source = item.sourceAccount || "Privatkonto";
                     const target = item.targetAccount || "";
 
-                    if (cat === "Geschäftsauslagen") return; // Ignorieren wir komplett
+                    if (cat === "Geschäftsauslagen") return; // Ignoriert für Netto
 
                     if (type === "Ausgabe" || (type === "Transfer" && source === "Privatkonto" && target !== "Bargeld")) {
                         totalExp += amt;
@@ -1685,7 +1816,7 @@
         }
 
         function updateChart() {
-            updateYearlyStats(); // Aktualisiere auch das Dashboard
+            updateYearlyStats(); // Dashboard Werte updaten
 
             const ctx = document.getElementById('myChart'); if(!ctx) return;
             const chartType = document.getElementById('chart-type-selector').value;
@@ -1856,6 +1987,69 @@
 
         function savePortfolioData() { localStorage.setItem('portfolio_data_v1', JSON.stringify(portfolioData)); updateExportDate(); }
 
+        function saveWishlist() { localStorage.setItem('wishlist_v1', JSON.stringify(wishlistData)); renderWishlist(); }
+
+        function addWishlist() {
+            const name = document.getElementById('wish-name').value.trim();
+            const amt = parseFloat(document.getElementById('wish-amount').value) || 0;
+            const type = document.getElementById('wish-type').value;
+            if(name && amt > 0) {
+                wishlistData.push({name, amount: amt, type});
+                saveWishlist();
+                document.getElementById('wish-name').value = '';
+                document.getElementById('wish-amount').value = '';
+            }
+        }
+
+        function deleteWishlist(idx) {
+            if(confirm('Ziel löschen?')) {
+                wishlistData.splice(idx, 1);
+                saveWishlist();
+            }
+        }
+
+        function renderWishlist() {
+            const container = document.getElementById('wishlist-grid');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            if(wishlistData.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">Noch keine Ziele erfasst.</div>';
+                return;
+            }
+
+            wishlistData.forEach((item, index) => {
+                let currentVal = item.type === 'rendite' ? currentRenditeGlobal : currentLiquidGlobal;
+                let isRendite = item.type === 'rendite';
+                
+                let displayVal = currentVal;
+                // Verhindere grafische Bugs bei Minus-Zahlen
+                if(currentVal < 0) displayVal = 0; 
+
+                let pct = Math.min(100, Math.max(0, Math.round((displayVal / item.amount) * 100)));
+                
+                let color = pct >= 100 ? 'var(--success)' : 'var(--accent)';
+                if(isRendite) color = pct >= 100 ? 'var(--success)' : '#8E44AD';
+
+                container.innerHTML += `
+                <div class="progress-container" style="margin-bottom: 0; padding: 15px; border-left-color: ${color}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: bold; font-size: 14px; color: var(--text);">${item.name}</span>
+                        <button class="btn btn-icon" style="padding: 2px 6px; font-size: 10px; background: transparent;" onclick="deleteWishlist(${index})">❌</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                        <span>${isRendite ? '📉 Rendite' : '💵 Liquidität'}</span>
+                        <span style="color: ${color}; font-weight: bold;">${formatCHF(displayVal)} / ${formatCHF(item.amount)} (${pct}%)</span>
+                    </div>
+                    <div class="progress-bar-bg" style="height: 8px; margin-top: 0;">
+                        <div class="progress-bar-fill" style="width: ${pct}%; background: ${color};"></div>
+                    </div>
+                </div>
+                `;
+            });
+        }
+
+
         function renderPortfolioInputs() {
             const container = document.getElementById('dynamic-portfolio-inputs');
             if(!container) return;
@@ -1961,9 +2155,52 @@
             let liquid = currentBalances.privat + currentBalances.sparkonto + currentBalances.bargeld;
             let invest = enrichedData.length > 0 ? enrichedData[0].assetsSum : 0;
             
+            // RENDITE BERECHNUNG (Zinseszins vs. harte Einzahlungen)
+            let investRendite = 0;
+            if (enrichedData.length > 0 && chronologicalData.length > 0) {
+                let baselineInvestValue = 0;
+                let firstAssets = chronologicalData[0].assets || {};
+                investCats.forEach(c => baselineInvestValue += (firstAssets[c] || 0));
+                
+                let firstDate = chronologicalData[0].date;
+                let netTransfers = 0;
+
+                Object.keys(trackerData).forEach(m => {
+                    (trackerData[m] || []).forEach(tx => {
+                        if (tx.type === 'Transfer' && tx.date > firstDate) {
+                            if (investCats.includes(tx.targetAccount)) netTransfers += parseFloat(tx.amount) || 0;
+                            if (investCats.includes(tx.sourceAccount)) netTransfers -= parseFloat(tx.amount) || 0;
+                        }
+                    });
+                });
+                
+                investRendite = invest - (baselineInvestValue + netTransfers);
+            }
+            
+            const renditeEl = document.getElementById('port-rendite');
+            const renditeCard = document.getElementById('port-rendite-card');
+            if (renditeEl) {
+                renditeEl.innerText = formatCHF(investRendite);
+                if (investRendite < 0) {
+                    renditeEl.style.color = '#E74C3C';
+                    renditeCard.style.borderBottomColor = '#E74C3C';
+                } else if (investRendite > 0) {
+                    renditeEl.style.color = 'var(--success)';
+                    renditeCard.style.borderBottomColor = 'var(--success)';
+                } else {
+                    renditeEl.style.color = 'inherit';
+                    renditeCard.style.borderBottomColor = 'var(--accent)';
+                }
+            }
+
             document.getElementById('port-total').innerText = formatCHF(liquid + invest);
             document.getElementById('port-liquid').innerText = formatCHF(liquid);
             document.getElementById('port-invest').innerText = formatCHF(invest);
+
+            // Globale Werte für die Wunschliste updaten
+            currentLiquidGlobal = liquid;
+            currentRenditeGlobal = investRendite;
+            renderWishlist();
         }
 
         function updatePortfolioChart() {
